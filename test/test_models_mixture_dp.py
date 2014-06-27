@@ -1,6 +1,6 @@
 from distributions.dbg.models import bb
-from microscopes.models.mixture.dp import DirichletProcess
-from microscopes.common.util import almost_eq, KL_discrete
+from microscopes.py.mixture.dp import state
+from microscopes.py.common.util import almost_eq, KL_discrete
 from scipy.misc import logsumexp
 
 import numpy as np
@@ -9,12 +9,17 @@ import itertools as it
 
 from nose.plugins.attrib import attr
 
+# XXX: less code duplication in test cases
+
 def test_sample_post_pred_no_given_data():
     D = 5
     N = 1000
     alpha = 2.0
 
-    mm = DirichletProcess(N, {'alpha':alpha}, [bb]*D, [{'alpha':1.,'beta':1.}]*D)
+    mm = state(N, [bb]*D)
+    mm.set_cluster_hp({'alpha':alpha})
+    for i in xrange(D):
+        mm.set_feature_hp(i, {'alpha':1.,'beta':1.})
 
     Y_clustered, _ = mm.sample(N)
     Y = np.hstack(Y_clustered)
@@ -71,7 +76,10 @@ def test_sample_post_pred_given_data():
     N = 1000
     alpha = 2.0
 
-    mm = DirichletProcess(N, {'alpha':alpha}, [bb]*D, [{'alpha':1.,'beta':1.}]*D)
+    mm = state(N, [bb]*D)
+    mm.set_cluster_hp({'alpha':alpha})
+    for i in xrange(D):
+        mm.set_feature_hp(i, {'alpha':1.,'beta':1.})
 
     Y_clustered, _ = mm.sample(N)
     Y = np.hstack(Y_clustered)

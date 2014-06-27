@@ -1,22 +1,19 @@
 import numpy as np
 import numpy.ma as ma
 
-from microscopes.common.groups import FixedNGroupManager
+from microscopes.py.common.groups import FixedNGroupManager
 from distributions.dbg.random import sample_discrete_log, sample_discrete
 from distributions.dbg.special import gammaln
 
-class DirichletFixed(object):
+class state(object):
 
-    def __init__(self, n, k, clusterhp, featuretypes, featurehps):
+    def __init__(self, n, k, featuretypes):
         self._groups = FixedNGroupManager(n)
-        self._alpha = clusterhp['alpha'] # dirichlet distribution alpha
+        self._alpha = None
         self._featuretypes = featuretypes
-        def init_and_load_shared(arg):
-            typ, hp = arg
-            shared = typ.Shared()
-            shared.load(hp)
-            return shared
-        self._featureshares = map(init_and_load_shared, zip(self._featuretypes, featurehps))
+        def init_shared(typ):
+            return typ.Shared()
+        self._featureshares = map(init_shared, self._featuretypes)
         for i in xrange(k):
             gid = self._create_group()
             assert gid == i
@@ -24,16 +21,16 @@ class DirichletFixed(object):
         self._nomask = tuple(False for _ in xrange(len(self._featuretypes)))
         self._y_dtype = self._mk_y_dtype()
 
-    def get_cluster_hp_raw(self):
+    def get_cluster_hp(self):
         return {'alpha':self._alpha}
 
-    def set_cluster_hp_raw(self, raw):
-        self._alpha = clusterhp['alpha']
+    def set_cluster_hp(self, raw):
+        self._alpha = float(raw['alpha'])
 
-    def get_feature_hp_raw(self, fi):
+    def get_feature_hp(self, fi):
         return self._featureshares[fi].dump()
 
-    def set_feature_hp_raw(self, fi, raw):
+    def set_feature_hp(self, fi, raw):
         self._featureshares[fi].load(raw)
 
     def get_feature_hp_shared(self, fi):
