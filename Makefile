@@ -6,7 +6,9 @@ O := out
 TOP := $(shell echo $${PWD-`pwd`})
 
 # set the CXXFLAGS
-CXXFLAGS := -fPIC -g -MD -Wall -std=c++0x -I$(TOP)/include -I$(TOP)/../common/include
+CXXFLAGS := -fPIC -g -MD -Wall -std=c++0x -I$(TOP)/include
+CXXFLAGS += -I$(TOP)/../common/include
+CXXFLAGS += -I$(TOP)/../mixturemodel/include
 ifneq ($(strip $(DEBUG)),1)
 	CXXFLAGS += -O3 -DNDEBUG
 endif
@@ -16,8 +18,9 @@ endif
 
 # set the LDFLAGS
 LDFLAGS := -lprotobuf -ldistributions_shared -lmicroscopes_common
+LDFLAGS += -L$(TOP)/../common/out -Wl,-rpath,$(TOP)/../common/out
 ifneq ($(strip $(DISTRIBUTIONS_LIB)),)
-	LDFLAGS += -L$(DISTRIBUTIONS_LIB) -Wl,-rpath,$(DISTRIBUTIONS_LIB) -L$(TOP)/../common/out -Wl,-rpath,$(TOP)/../common/out
+	LDFLAGS += -L$(DISTRIBUTIONS_LIB) -Wl,-rpath,$(DISTRIBUTIONS_LIB) 
 endif
 
 SRCFILES := $(wildcard src/mixture/*.cpp) 
