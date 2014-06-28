@@ -16,6 +16,15 @@ class state(object):
         self._nomask = tuple(False for _ in xrange(len(self._featuretypes)))
         self._y_dtype = self._mk_y_dtype()
 
+    def _mk_dtype_desc(self, fi):
+        typ, shared = self._featuretypes[fi], self._featureshares[fi]
+        if hasattr(shared, 'dimension') and shared.dimension() > 1:
+            return ('', typ.Value, (shared.dimension(),))
+        return ('', typ.Value)
+
+    def _mk_y_dtype(self):
+        return [self._mk_dtype_desc(i) for i in xrange(len(self._featuretypes))]
+
     def get_cluster_hp(self):
         return {'alpha':self._alpha}
 
@@ -156,11 +165,7 @@ class state(object):
         """
         return self.score_assignment() + self.score_data(features=None, groups=None)
 
-    def sample_post_pred(self, y_new, size):
-        ret = [self._sample_post_pred_one(y_new) for _ in xrange(size)]
-        return np.hstack(ret)
-
-    def _sample_post_pred_one(self, y_new):
+    def sample_post_pred(self, y_new):
         """
         draw a sample from p(y_new | C, Y)
 
@@ -179,7 +184,6 @@ class state(object):
 
         ### XXX: groups should really have a "resample from prior" interface
         ### so we don't have to keep creating and deleting groups
-
         empty_gids = list(self.empty_groups())
         for gid in empty_gids:
             self.delete_group(gid)
@@ -196,98 +200,90 @@ class state(object):
                 return gdata[i].sample_value(self._featureshares[i])
             else:
                 return y_new[i]
-        return np.array([tuple(map(pick, xrange(len(self._featuretypes))))], dtype=self._y_dtype)
+        return gid, np.array([tuple(map(pick, xrange(len(self._featuretypes))))], dtype=self._y_dtype)
 
-    def reset(self):
-        """
-        reset to the same condition as upon construction
-        """
-        self._groups = FixedNGroupManager(self._groups.nentities())
+    #def reset(self):
+    #    """
+    #    reset to the same condition as upon construction
+    #    """
+    #    self._groups = FixedNGroupManager(self._groups.nentities())
 
-    def bootstrap(self, it):
-        """
-        bootstraps assignments
-        """
-        assert not self.ngroups()
-        assert self._groups.no_entities_assigned()
+    #def bootstrap(self, it):
+    #    """
+    #    bootstraps assignments
+    #    """
+    #    assert not self.ngroups()
+    #    assert self._groups.no_entities_assigned()
 
-        ei0, y0 = next(it)
-        gid0 = self.create_group()
-        self.add_entity_to_group(gid0, ei0, y0)
-        empty_gid = self.create_group()
-        for ei, yi in it:
-            idmap, scores = self.score_value(yi)
-            gid = idmap[sample_discrete_log(scores)]
-            self.add_entity_to_group(gid, ei, yi)
-            if gid == empty_gid:
-                empty_gid = self.create_group()
+    #    ei0, y0 = next(it)
+    #    gid0 = self.create_group()
+    #    self.add_entity_to_group(gid0, ei0, y0)
+    #    empty_gid = self.create_group()
+    #    for ei, yi in it:
+    #        idmap, scores = self.score_value(yi)
+    #        gid = idmap[sample_discrete_log(scores)]
+    #        self.add_entity_to_group(gid, ei, yi)
+    #        if gid == empty_gid:
+    #            empty_gid = self.create_group()
 
-        assert self._groups.all_entities_assigned()
+    #    assert self._groups.all_entities_assigned()
 
-    def fill(self, clusters):
-        """
-        form a cluster assignment and sufficient statistics out of an given
-        clustering of N points.
+    #def fill(self, clusters):
+    #    """
+    #    form a cluster assignment and sufficient statistics out of an given
+    #    clustering of N points.
 
-        useful to bootstrap a model as the ground truth model
-        """
-        assert not self.ngroups()
-        assert self._groups.no_entities_assigned()
+    #    useful to bootstrap a model as the ground truth model
+    #    """
+    #    assert not self.ngroups()
+    #    assert self._groups.no_entities_assigned()
 
-        counts = [c.shape[0] for c in clusters]
-        cumcounts = np.cumsum(counts)
-        gids = [self.create_group() for _ in xrange(len(clusters))]
-        for cid, (gid, data) in enumerate(zip(gids, clusters)):
-            off = cumcounts[cid-1] if cid else 0
-            for ei, yi in enumerate(data):
-                self.add_entity_to_group(gid, off + ei, yi)
+    #    counts = [c.shape[0] for c in clusters]
+    #    cumcounts = np.cumsum(counts)
+    #    gids = [self.create_group() for _ in xrange(len(clusters))]
+    #    for cid, (gid, data) in enumerate(zip(gids, clusters)):
+    #        off = cumcounts[cid-1] if cid else 0
+    #        for ei, yi in enumerate(data):
+    #            self.add_entity_to_group(gid, off + ei, yi)
 
-        assert self._groups.all_entities_assigned()
+    #    assert self._groups.all_entities_assigned()
 
-    def _mk_dtype_desc(self, fi):
-        typ, shared = self._featuretypes[fi], self._featureshares[fi]
-        if hasattr(shared, 'dimension') and shared.dimension() > 1:
-            return ('', typ.Value, (shared.dimension(),))
-        return ('', typ.Value)
 
-    def _mk_y_dtype(self):
-        return [self._mk_dtype_desc(i) for i in xrange(len(self._featuretypes))]
+    #def sample(self, n):
+    #    """
+    #    generate n iid samples from the underlying generative process described by this DirichletProcess.
 
-    def sample(self, n):
-        """
-        generate n iid samples from the underlying generative process described by this DirichletProcess.
+    #    does not affect the state of the DirichletProcess, and only depends on the prior parameters of the
+    #    DirichletProcess
 
-        does not affect the state of the DirichletProcess, and only depends on the prior parameters of the
-        DirichletProcess
-
-        returns a tuple of
-            (
-                k-length tuple of observations, where k is the # of sampled clusters from the CRP,
-                k-length tuple of cluster samplers
-            )
-        """
-        cluster_counts = np.array([1], dtype=np.int)
-        def init_sampler(arg):
-            typ, s = arg
-            samp = typ.Sampler()
-            samp.init(s)
-            return samp
-        def new_cluster_params():
-            return tuple(map(init_sampler, zip(self._featuretypes, self._featureshares)))
-        def new_sample(params):
-            data = tuple(samp.eval(s) for samp, s in zip(params, self._featureshares))
-            return data
-        cluster_params = [new_cluster_params()]
-        samples = [[new_sample(cluster_params[-1])]]
-        for _ in xrange(1, n):
-            dist = np.append(cluster_counts, self._alpha).astype(np.float, copy=False)
-            choice = sample_discrete(dist)
-            if choice == len(cluster_counts):
-                cluster_counts = np.append(cluster_counts, 1)
-                cluster_params.append(new_cluster_params())
-                samples.append([new_sample(cluster_params[-1])])
-            else:
-                cluster_counts[choice] += 1
-                params = cluster_params[choice]
-                samples[choice].append(new_sample(params))
-        return tuple(np.array(ys, dtype=self._y_dtype) for ys in samples), tuple(cluster_params)
+    #    returns a tuple of
+    #        (
+    #            k-length tuple of observations, where k is the # of sampled clusters from the CRP,
+    #            k-length tuple of cluster samplers
+    #        )
+    #    """
+    #    cluster_counts = np.array([1], dtype=np.int)
+    #    def init_sampler(arg):
+    #        typ, s = arg
+    #        samp = typ.Sampler()
+    #        samp.init(s)
+    #        return samp
+    #    def new_cluster_params():
+    #        return tuple(map(init_sampler, zip(self._featuretypes, self._featureshares)))
+    #    def new_sample(params):
+    #        data = tuple(samp.eval(s) for samp, s in zip(params, self._featureshares))
+    #        return data
+    #    cluster_params = [new_cluster_params()]
+    #    samples = [[new_sample(cluster_params[-1])]]
+    #    for _ in xrange(1, n):
+    #        dist = np.append(cluster_counts, self._alpha).astype(np.float, copy=False)
+    #        choice = sample_discrete(dist)
+    #        if choice == len(cluster_counts):
+    #            cluster_counts = np.append(cluster_counts, 1)
+    #            cluster_params.append(new_cluster_params())
+    #            samples.append([new_sample(cluster_params[-1])])
+    #        else:
+    #            cluster_counts[choice] += 1
+    #            params = cluster_params[choice]
+    #            samples[choice].append(new_sample(params))
+    #    return tuple(np.array(ys, dtype=self._y_dtype) for ys in samples), tuple(cluster_params)

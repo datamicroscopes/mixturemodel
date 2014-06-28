@@ -165,7 +165,7 @@ state::score_data(const vector<size_t> &features,
   return sum;
 }
 
-void
+size_t
 state::sample_post_pred(row_accessor &acc,
                         row_mutator &mut,
                         rng_t &rng) const
@@ -189,4 +189,6 @@ state::sample_post_pred(row_accessor &acc,
     }
     gdata[i]->sample_value(*models_[i], mut, rng);
   }
+
+  return choice;
 }

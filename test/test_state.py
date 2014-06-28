@@ -215,8 +215,8 @@ def test_sample_post_pred():
 
     n_samples = 1000
 
-    py_samples = py_s.sample_post_pred(y_new, n_samples)
-    cxx_samples = cxx_s.sample_post_pred(y_new, n_samples, R)
+    py_samples = np.hstack([py_s.sample_post_pred(y_new)[1] for _ in xrange(n_samples)])
+    cxx_samples = np.hstack([cxx_s.sample_post_pred(y_new, R)[1] for _ in xrange(n_samples)])
 
     idmap = { C : i for i, C in enumerate(it.product([False,True], repeat=D)) }
     def todist(samples):

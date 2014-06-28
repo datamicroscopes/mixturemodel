@@ -156,14 +156,11 @@ cdef class state:
             f.push_back(i)
         return self._thisptr[0].score_data(f, r._thisptr[0])
 
-    def sample_post_pred(self, y_new, int size, rng r):
+    def sample_post_pred(self, y_new, rng r):
         if y_new is None:
             y_new = ma.zeros(len(self._models))
             y_new[:] = ma.masked
-        ret = [self._sample_post_pred_one(y_new, r) for _ in xrange(size)]
-        return np.hstack(ret)
 
-    def _sample_post_pred_one(self, y_new, rng r):
         cdef numpy_dataview view = get_dataview_for(y_new)
         cdef row_accessor acc = view._thisptr[0].get()
 
@@ -188,6 +185,6 @@ cdef class state:
             &out_ctypes,
             out_offsets)
 
-        self._thisptr[0].sample_post_pred(acc, mut, r._thisptr[0])
+        gid = self._thisptr[0].sample_post_pred(acc, mut, r._thisptr[0])
 
-        return out_npd
+        return gid, out_npd

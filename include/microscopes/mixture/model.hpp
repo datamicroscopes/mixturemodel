@@ -140,7 +140,7 @@ public:
 
 
   // XXX: we assume the caller has taken care to set the groups correctly!
-  void sample_post_pred(common::row_accessor &acc, common::row_mutator &mut, common::rng_t &rng) const;
+  size_t sample_post_pred(common::row_accessor &acc, common::row_mutator &mut, common::rng_t &rng) const;
 
   // random statistics
   inline size_t groups_created() const { return gcount_; }

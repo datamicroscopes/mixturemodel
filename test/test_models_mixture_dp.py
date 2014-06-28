@@ -9,8 +9,6 @@ import itertools as it
 
 from nose.plugins.attrib import attr
 
-# XXX: less code duplication in test cases
-
 def test_sample_post_pred_no_given_data():
     D = 5
     N = 1000
