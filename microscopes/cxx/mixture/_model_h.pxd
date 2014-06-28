@@ -1,5 +1,6 @@
 from libcpp.vector cimport vector
 from libcpp.string cimport string
+from libcpp.set cimport set
 from libc.stddef cimport size_t
 
 from microscopes._shared_ptr_h cimport shared_ptr
@@ -17,6 +18,23 @@ cdef extern from "microscopes/mixture/model.hpp" namespace "microscopes::mixture
         void set_hp(hyperparam_bag_t &) except +
         hyperparam_bag_t get_feature_hp(size_t) except +
         void set_feature_hp(size_t, hyperparam_bag_t &) except +
+        suffstats_bag_t get_suff_stats(size_t, size_t) except +
+        void set_suff_stats(size_t, size_t, suffstats_bag_t &) except +
+
+        vector[ssize_t] & assignments() 
+        set[size_t] & empty_groups()
+
+        size_t nentities()
+        size_t ngroups()
+        size_t groupsize(size_t) except +
+        vector[size_t] groups() except +
+
+        size_t create_group(rng_t &) except +
+        void delete_group(size_t) except +
+
+        void add_value(size_t, size_t, row_accessor &, rng_t &) except +
+        void remove_value(size_t, row_accessor &, rng_t &) except +
+        void score_value(row_accessor &, rng_t &) except +
 
         void ensure_k_empty_groups(size_t, rng_t &) except +
         void sample_post_pred(row_accessor &, row_mutator &, rng_t &) except +	

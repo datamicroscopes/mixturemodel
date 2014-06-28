@@ -14,6 +14,7 @@ from microscopes.cxx.common._type_helper_h cimport GetOffsetsAndSize
 from microscopes.cxx.common._rng cimport rng
 cimport microscopes.cxx.common._type_info_h as ti
 from microscopes.cxx.mixture._model_h cimport state as c_state
+from microscopes.cxx.common._dataview cimport numpy_dataview
 
 cimport numpy as np
 

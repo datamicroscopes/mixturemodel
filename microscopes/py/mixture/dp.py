@@ -31,11 +31,11 @@ class state(object):
     def get_feature_hp_shared(self, fi):
         return self._featureshares[fi]
 
-    def get_suff_stats_for_feature(self, fi):
-        return [(gid, gdata[fi]) for gid, (_, gdata) in self._groups.groupiter()]
+    def get_suff_stats(self, gid, fid):
+        return self._groups.group_data(gid)[fid].dump()
 
-    def get_suff_stats_for_group(self, gid):
-        return self._groups.group_data(gid)
+    def set_suff_stats(self, gid, fid, raw):
+        self._groups.group_data(gid)[fid].load(raw)
 
     def assignments(self):
         return self._groups.assignments()
@@ -49,8 +49,8 @@ class state(object):
     def nentities(self):
         return self._groups.nentities()
 
-    def nentities_in_group(self, gid):
-        return self._groups.nentities_in_group(gid)
+    def groupsize(self, gid):
+        return self._groups.groupsize(gid)
 
     def is_group_empty(self, gid):
         return not self._groups.nentities_in_group(gid)
@@ -76,14 +76,14 @@ class state(object):
     def _mask(self, y):
         return y.mask if hasattr(y, 'mask') else self._nomask
 
-    def add_entity_to_group(self, gid, eid, y):
+    def add_value(self, gid, eid, y):
         gdata = self._groups.add_entity_to_group(gid, eid)
         mask = self._mask(y)
         for (g, s), (yi, mi) in zip(zip(gdata, self._featureshares), zip(y, mask)):
             if not mi:
                 g.add_value(s, yi)
 
-    def remove_entity_from_group(self, eid, y):
+    def remove_value(self, eid, y):
         """
         returns gid
         """

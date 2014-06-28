@@ -1,4 +1,5 @@
 import numpy as np
+import numpy.ma as ma
 from microscopes.io.schema_pb2 import CRP
 
 def get_np_type(tpe):
@@ -17,6 +18,47 @@ def get_np_type(tpe):
     if tpe == ti.TYPE_INFO_F64:
         return np.float64
     raise Exception("unknown type: " + tpe)
+
+cdef numpy_dataview get_dataview_for(y):
+    """
+    creates a dataview for a single recarray
+
+    not very efficient
+    """
+
+    cdef np.ndarray inp_data
+    cdef np.ndarray inp_mask
+
+    if hasattr(y, 'mask'):
+        # deal with the mask
+        inp_mask = np.ascontiguousarray(y.mask)
+    else:
+        inp_mask = None
+
+    # this allows us to unify the two possible representations here
+    # notice:
+    # In [53]: y
+    # Out[53]: 
+    # masked_array(data = [(--, 10.0)],
+    #              mask = [(True, False)],
+    #        fill_value = (True, 1e+20),
+    #             dtype = [('f0', '?'), ('f1', '<f8')])
+    # 
+    # In [54]: np.ascontiguousarray(y)
+    # Out[54]: 
+    # array([(True, 10.0)], 
+    #       dtype=[('f0', '?'), ('f1', '<f8')])
+    # 
+    # In [57]: np.ascontiguousarray(y[0])
+    # Out[57]: 
+    # array([(True, 10.0)], 
+    #       dtype=[('f0', '?'), ('f1', '<f8')])
+
+    inp_data = np.ascontiguousarray(y)
+    if inp_mask is not None:
+        inp_data = ma.array(inp_data, mask=inp_mask)
+
+    return numpy_dataview(inp_data)
 
 cdef class state:
     def __cinit__(self, n, list models):
@@ -47,6 +89,57 @@ cdef class state:
     def set_feature_hp(self, int i, dict d):
         cdef hyperparam_bag_t raw = self._models[i][0].shared_dict_to_bytes(d) 
         self._thisptr[0].set_feature_hp(i, raw)
+
+    def get_suff_stats(self, int gid, int fid):
+        raw = str(self._thisptr[0].get_suff_stats(gid, fid))
+        return self._models[fid][0].group_bytes_to_dict(raw)
+
+    def set_suff_stats(self, int gid, int fid, dict d):
+        cdef suffstats_bag_t raw = self._models[fid][0].shared_dict_to_bytes(d) 
+        self._thisptr[0].set_suff_stats(gid, fid, raw)
+
+    def assignments(self):
+        cdef list ass = self._thisptr[0].assignments()
+        return ass
+
+    def empty_groups(self):
+        cdef list egroups = list(self._thisptr[0].empty_groups())
+        return egroups
+
+    def ngroups(self):
+        return self._thisptr[0].ngroups()
+    
+    def nentities(self):
+        return self._thisptr[0].nentities()
+
+    def groupsize(self, int gid):
+        return self._thisptr[0].groupsize(gid)
+
+    def is_group_empty(self, int gid):
+        return not self._groups.nentities_in_group(gid)
+
+    def groups(self):
+        cdef list g = self._thisptr[0].groups()
+        return g
+
+    def create_group(self, rng r):
+        return self._thisptr[0].create_group(r._thisptr[0])
+
+    def delete_group(self, int gid):
+        self._thisptr[0].delete_group(gid)
+
+    def add_value(self, int gid, int eid, y, rng r):
+        cdef numpy_dataview view = get_dataview_for(y)
+        cdef row_accessor acc = view._thisptr[0].get()
+        self._thisptr[0].add_value(gid, eid, acc, r._thisptr[0])
+
+    def remove_value(self, int eid, y, rng r):
+        cdef numpy_dataview view = get_dataview_for(y)
+        cdef row_accessor acc = view._thisptr[0].get()
+        self._thisptr[0].remove_value(eid, acc, r._thisptr[0])
+
+    def score_value(self, y, rng r):
+        pass
 
     def sample_post_pred(self, np.ndarray inp, rng rng, size=1):
         ret = [self._sample_post_pred_one(inp, rng) for _ in xrange(size)]

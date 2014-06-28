@@ -25,7 +25,7 @@ state::create_group(rng_t &rng)
 }
 
 void
-state::remove_group(size_t gid)
+state::delete_group(size_t gid)
 {
   auto it = groups_.find(gid);
   assert(it != groups_.end());
@@ -40,15 +40,15 @@ void
 state::ensure_k_empty_groups(size_t k, rng_t &rng)
 {
   // XXX: should allow for resampling
-  if (emptygroups().size() == k)
+  if (empty_groups().size() == k)
     return;
   // XXX: NOT EFFICIENT
-  vector<size_t> empty_groups(gempty_.begin(), gempty_.end());
-  for (auto egid : empty_groups)
-    remove_group(egid);
+  vector<size_t> egids(gempty_.begin(), gempty_.end());
+  for (auto egid : egids)
+    delete_group(egid);
   for (size_t i = 0; i < k; i++)
     create_group(rng);
-  assert( emptygroups().size() == k );
+  assert( empty_groups().size() == k );
 }
 
 vector<runtime_type_info>
@@ -65,7 +65,15 @@ void
 state::add_value(size_t gid, const dataview &view, rng_t &rng)
 {
   assert(view.size() == assignments_.size());
-  assert(assignments_.at(view.index()) == -1);
+  row_accessor acc = view.get();
+  const size_t eid = view.index();
+  add_value(gid, eid, acc, rng);
+}
+
+void
+state::add_value(size_t gid, size_t eid, common::row_accessor &acc, common::rng_t &rng)
+{
+  assert(assignments_.at(eid) == -1);
   auto it = groups_.find(gid);
   assert(it != groups_.end());
   if (!it->second.first++) {
@@ -74,35 +82,43 @@ state::add_value(size_t gid, const dataview &view, rng_t &rng)
   } else {
     assert(!gempty_.count(gid));
   }
-  row_accessor acc = view.get();
+  acc.reset();
   assert(acc.nfeatures() == it->second.second.size());
   for (size_t i = 0; i < acc.nfeatures(); i++, acc.bump()) {
     if (unlikely(acc.ismasked()))
       continue;
     it->second.second[i]->add_value(*models_[i], acc, rng);
   }
-  assignments_[view.index()] = gid;
+  assignments_[eid] = gid;
 }
 
 size_t
-state::remove_value(const dataview &view, rng_t &rng)
+state::remove_value(const common::dataview &view, rng_t &rng)
 {
   assert(view.size() == assignments_.size());
-  assert(assignments_.at(view.index()) != -1);
-  const size_t gid = assignments_[view.index()];
+  row_accessor acc = view.get();
+  const size_t eid = view.index();
+  return remove_value(eid, acc, rng);
+}
+
+size_t
+state::remove_value(size_t eid, common::row_accessor &acc, common::rng_t &rng)
+{
+  assert(assignments_.at(eid) != -1);
+  const size_t gid = assignments_[eid];
   auto it = groups_.find(gid);
   assert(it != groups_.end());
   assert(!gempty_.count(gid));
   if (!--it->second.first)
     gempty_.insert(gid);
-  row_accessor acc = view.get();
+  acc.reset();
   assert(acc.nfeatures() == it->second.second.size());
   for (size_t i = 0; i < acc.nfeatures(); i++, acc.bump()) {
     if (unlikely(acc.ismasked()))
       continue;
     it->second.second[i]->remove_value(*models_[i], acc, rng);
   }
-  assignments_[view.index()] = -1;
+  assignments_[eid] = -1;
   return gid;
 }
 
