@@ -3,10 +3,12 @@
 from distributions.util import scores_to_probs
 
 from distributions.dbg.models import bb as py_bb
+from distributions.dbg.models import bnb as py_bnb
 from distributions.dbg.models import nich as py_nich
 from microscopes.py.mixture.dp import state as py_state
 
 from microscopes.cxx.models import bb as cxx_bb
+from microscopes.cxx.models import bnb as cxx_bnb
 from microscopes.cxx.models import nich as cxx_nich
 from microscopes.cxx.mixture.model import state as cxx_state
 from microscopes.cxx.common.rng import rng
@@ -27,6 +29,12 @@ def assert_1darray_almst_equals(a, b, places=5):
     assert a.shape[0] == b.shape[0]
     for x, y in zip(a, b):
         assert_almost_equals(x, y, places=places)
+
+def assert_suff_stats_equal(py_s, cxx_s, features, groups):
+    for fid, gid in it.product(features, groups):
+        py_ss = py_s.get_suff_stats(gid, fid)
+        cxx_ss = cxx_s.get_suff_stats(gid, fid)
+        assert_dict_almost_equals(py_ss, cxx_ss)
 
 def test_operations():
     N = 10
@@ -79,19 +87,13 @@ def test_operations():
         py_s.add_value(egid, i, yi)
         cxx_s.add_value(egid, i, yi, R)
 
-    def assert_suff_stats_equal():
-        for fid, gid in it.product(range(4), range(2)):
-            py_ss = py_s.get_suff_stats(gid, fid)
-            cxx_ss = cxx_s.get_suff_stats(gid, fid)
-            assert_dict_almost_equals(py_ss, cxx_ss)
-
-    assert_suff_stats_equal()
+    assert_suff_stats_equal(py_s, cxx_s, features=range(4), groups=range(2))
 
     for i, yi in it.islice(enumerate(data), 2):
         py_s.remove_value(i, yi)
         cxx_s.remove_value(i, yi, R)
 
-    assert_suff_stats_equal()
+    assert_suff_stats_equal(py_s, cxx_s, features=range(4), groups=range(2))
 
     py_s.create_group()
     cxx_s.create_group(R)
@@ -116,7 +118,54 @@ def test_operations():
 
     assert_almost_equals(py_score, cxx_score, places=2)
 
-    # now try some masked data
+def test_masked_operations():
+    N = 10
+    R = rng(2347785)
+
+    py_s = py_state(N, [py_bb, py_bnb, py_nich])
+    py_s.set_cluster_hp({'alpha':10.0})
+    py_s.set_feature_hp(0, py_bb.EXAMPLES[0]['shared'])
+    py_s.set_feature_hp(1, py_bnb.EXAMPLES[0]['shared'])
+    py_s.set_feature_hp(2, py_nich.EXAMPLES[0]['shared'])
+
+    cxx_s = cxx_state(N, [cxx_bb, cxx_bnb, cxx_nich])
+    cxx_s.set_cluster_hp({'alpha':10.0})
+    cxx_s.set_feature_hp(0, py_bb.EXAMPLES[0]['shared'])
+    cxx_s.set_feature_hp(1, py_bnb.EXAMPLES[0]['shared'])
+    cxx_s.set_feature_hp(2, py_nich.EXAMPLES[0]['shared'])
+
+    dtype = [('',bool), ('',int), ('',float)]
+
+    def randombool():
+        return np.random.choice([False, True])
+
+    def mkrow():
+        return (randombool(), np.random.randint(1, 10), np.random.random())
+    def mkmask():
+        return (randombool(), randombool(), randombool())
+
+    # non-masked data
+    data = [mkrow() for _ in xrange(N)]
+    data = np.array(data, dtype=dtype)
+    mask = [mkmask() for _ in xrange(N)]
+    data = ma.masked_array(data, mask=mask)
+
+    for _ in xrange(3):
+        py_s.create_group()
+        cxx_s.create_group(R)
+
+    for i, yi in enumerate(data):
+        egid = i % 2
+        py_s.add_value(egid, i, yi)
+        cxx_s.add_value(egid, i, yi, R)
+
+    assert_suff_stats_equal(py_s, cxx_s, features=range(3), groups=range(3))
+
+    for i, yi in enumerate(data):
+        py_s.remove_value(i, yi)
+        cxx_s.remove_value(i, yi, R)
+
+    assert_suff_stats_equal(py_s, cxx_s, features=range(3), groups=range(3))
 
 def test_sample_post_pred():
     N = 10
@@ -155,12 +204,7 @@ def test_sample_post_pred():
         py_s.add_value(egid, i, yi)
         cxx_s.add_value(egid, i, yi, R)
 
-    def assert_suff_stats_equal():
-        for fid, gid in it.product(range(D), range(G)):
-            py_ss = py_s.get_suff_stats(gid, fid)
-            cxx_ss = cxx_s.get_suff_stats(gid, fid)
-            assert_dict_almost_equals(py_ss, cxx_ss)
-    assert_suff_stats_equal()
+    assert_suff_stats_equal(py_s, cxx_s, features=range(D), groups=range(G))
 
     # sample
     y_new_data = mkrow()
