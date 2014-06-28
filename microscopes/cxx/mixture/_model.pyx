@@ -29,13 +29,13 @@ cdef class state:
     def __dealloc__(self):
         del self._thisptr
 
-    def get_hp(self):
+    def get_cluster_hp(self):
         m = CRP()
         raw = str(self._thisptr[0].get_hp())
         m.ParseFromString(raw)
         return {'alpha':m.alpha}
 
-    def set_hp(self, raw):
+    def set_cluster_hp(self, raw):
         m = CRP()
         m.alpha = float(raw['alpha'])
         self._thisptr[0].set_hp(m.SerializeToString())
