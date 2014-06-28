@@ -38,20 +38,20 @@ cdef numpy_dataview get_dataview_for(y):
     # this allows us to unify the two possible representations here
     # notice:
     # In [53]: y
-    # Out[53]: 
+    # Out[53]:
     # masked_array(data = [(--, 10.0)],
     #              mask = [(True, False)],
     #        fill_value = (True, 1e+20),
     #             dtype = [('f0', '?'), ('f1', '<f8')])
-    # 
+    #
     # In [54]: np.ascontiguousarray(y)
-    # Out[54]: 
-    # array([(True, 10.0)], 
+    # Out[54]:
+    # array([(True, 10.0)],
     #       dtype=[('f0', '?'), ('f1', '<f8')])
-    # 
+    #
     # In [57]: np.ascontiguousarray(y[0])
-    # Out[57]: 
-    # array([(True, 10.0)], 
+    # Out[57]:
+    # array([(True, 10.0)],
     #       dtype=[('f0', '?'), ('f1', '<f8')])
 
     inp_data = np.ascontiguousarray(y)
@@ -87,7 +87,7 @@ cdef class state:
         return self._models[i][0].shared_bytes_to_dict(raw)
 
     def set_feature_hp(self, int i, dict d):
-        cdef hyperparam_bag_t raw = self._models[i][0].shared_dict_to_bytes(d) 
+        cdef hyperparam_bag_t raw = self._models[i][0].shared_dict_to_bytes(d)
         self._thisptr[0].set_feature_hp(i, raw)
 
     def get_suff_stats(self, int gid, int fid):
@@ -95,7 +95,7 @@ cdef class state:
         return self._models[fid][0].group_bytes_to_dict(raw)
 
     def set_suff_stats(self, int gid, int fid, dict d):
-        cdef suffstats_bag_t raw = self._models[fid][0].shared_dict_to_bytes(d) 
+        cdef suffstats_bag_t raw = self._models[fid][0].shared_dict_to_bytes(d)
         self._thisptr[0].set_suff_stats(gid, fid, raw)
 
     def assignments(self):
@@ -108,7 +108,7 @@ cdef class state:
 
     def ngroups(self):
         return self._thisptr[0].ngroups()
-    
+
     def nentities(self):
         return self._thisptr[0].nentities()
 
@@ -156,37 +156,19 @@ cdef class state:
             f.push_back(i)
         return self._thisptr[0].score_data(f, r._thisptr[0])
 
-    def sample_post_pred(self, np.ndarray inp, rng rng, size=1):
-        ret = [self._sample_post_pred_one(inp, rng) for _ in xrange(size)]
+    def sample_post_pred(self, y_new, int size, rng r):
+        if y_new is None:
+            y_new = ma.zeros(len(self._models))
+            y_new[:] = ma.masked
+        ret = [self._sample_post_pred_one(y_new, r) for _ in xrange(size)]
         return np.hstack(ret)
 
-    def _sample_post_pred_one(self, np.ndarray inp, rng rng):
-        cdef np.ndarray inp_data = None
-        cdef np.ndarray inp_mask = None
-        cdef vector[ti.runtime_type_info] inp_ctypes
-        cdef vector[ti.runtime_type_info] out_ctypes
-
-        if hasattr(inp, 'mask'):
-            inp_data = np.ascontiguousarray(inp.data)
-            inp_mask = np.ascontiguousarray(inp.mask)
-        else:
-            inp_data = np.ascontiguousarray(inp.data)
-
-        inp_ctypes = get_c_types(inp)
-        cdef pair[vector[size_t], size_t] inp_ret     
-        inp_ret = GetOffsetsAndSize(inp_ctypes)
-        cdef vector[size_t] *inp_offsets = &inp_ret.first
-
-        # build row_accessor
-        # XXX: can we stack allocate?
-        cdef row_accessor *acc = new row_accessor( 
-            <uint8_t *> inp_data.data, 
-            <cbool *> inp_mask.data if inp_mask is not None else NULL,
-            &inp_ctypes,
-            inp_offsets)
+    def _sample_post_pred_one(self, y_new, rng r):
+        cdef numpy_dataview view = get_dataview_for(y_new)
+        cdef row_accessor acc = view._thisptr[0].get()
 
         # ensure the state has 1 empty group
-        self._thisptr[0].ensure_k_empty_groups(1, rng._thisptr[0])     
+        self._thisptr[0].ensure_k_empty_groups(1, r._thisptr[0])
 
         out_ctypes = self._thisptr[0].get_runtime_type_info()
         out_dtype = []
@@ -197,17 +179,15 @@ cdef class state:
         cdef np.ndarray out_npd = np.zeros(1, dtype=out_dtype)
 
         # construct the output offsets
-        cdef pair[vector[size_t], size_t] out_ret     
+        cdef pair[vector[size_t], size_t] out_ret
         out_ret = GetOffsetsAndSize(out_ctypes)
         cdef vector[size_t] *out_offsets = &out_ret.first
 
-        cdef row_mutator *mut = new row_mutator(
+        cdef row_mutator mut = row_mutator(
             <uint8_t *> out_npd.data,
             &out_ctypes,
             out_offsets)
 
-        self._thisptr[0].sample_post_pred(acc[0], mut[0], rng._thisptr[0])
+        self._thisptr[0].sample_post_pred(acc, mut, r._thisptr[0])
 
-        del acc
-        del mut
         return out_npd

@@ -156,7 +156,11 @@ class state(object):
         """
         return self.score_assignment() + self.score_data(features=None, groups=None)
 
-    def sample_post_pred(self, y_new=None):
+    def sample_post_pred(self, y_new, size):
+        ret = [self._sample_post_pred_one(y_new) for _ in xrange(size)]
+        return np.hstack(ret)
+
+    def _sample_post_pred_one(self, y_new):
         """
         draw a sample from p(y_new | C, Y)
 
@@ -182,6 +186,7 @@ class state(object):
         egid = self.create_group()
 
         idmap, scores = self.score_value(y_new)
+
         gid = idmap[sample_discrete_log(scores)]
         gdata = self._groups.group_data(gid)
 

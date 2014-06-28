@@ -174,7 +174,14 @@ state::sample_post_pred(row_accessor &acc,
   auto scores = score_value(acc, rng);
   const auto choice = scores.first[util::sample_discrete_log(scores.second, rng)];
   const auto &gdata = groups_.at(choice).second;
-  acc.reset(); mut.reset();
+
+  //cout << "sample_post_pred():" << endl
+  //     << "  choice=" << choice << endl
+  //     << "  probs=" << scores.second << endl
+  //     << "  acc= " << acc.debug_str() << endl;
+
+  acc.reset();
+  mut.reset();
   for (size_t i = 0; !acc.end(); acc.bump(), mut.bump(), i++) {
     if (!acc.ismasked()) {
       mut.set(acc);

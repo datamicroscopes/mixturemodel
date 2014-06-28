@@ -121,7 +121,7 @@ def test_operations():
 def test_sample_post_pred():
     N = 10
     R = rng(5483932)
-    D = 5
+    D = 4
 
     py_s = py_state(N, [py_bb]*D)
     py_s.set_cluster_hp({'alpha':2.0})
@@ -185,4 +185,4 @@ def test_sample_post_pred():
     py_dist = todist(py_samples)
     cxx_dist = todist(cxx_samples)
 
-    assert_1darray_almst_equals(py_dist, cxx_dist, places=2)
+    assert_1darray_almst_equals(py_dist, cxx_dist, places=1)
