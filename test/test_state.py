@@ -1,5 +1,7 @@
 # test the low level primitive operations
 
+from distributions.util import scores_to_probs
+
 from distributions.dbg.models import bb as py_bb
 from distributions.dbg.models import nich as py_nich
 from microscopes.py.mixture.dp import state as py_state
@@ -18,6 +20,12 @@ def assert_dict_almost_equals(a, b):
     for k, v in a.iteritems():
         assert k in b
         assert_almost_equals(v, b[k], places=5) # floats don't have much precision
+
+def assert_1darray_almst_equals(a, b, places=5):
+    assert len(a.shape) == 1
+    assert a.shape[0] == b.shape[0]
+    for x, y in zip(a, b):
+        assert_almost_equals(x, y, places=places)
 
 def test_operations():
     N = 10
@@ -40,13 +48,17 @@ def test_operations():
     assert py_s.nentities() == N
     assert cxx_s.nentities() == N
 
+    def mkrow():
+        return (np.random.choice([False, True]),
+                np.random.choice([False, True]),
+                np.random.random(),
+                np.random.choice([False, True]))
+
+    dtype = [('',bool), ('',bool), ('',float), ('',bool)]
+
     # non-masked data
-    data = [(
-        np.random.choice([False, True]),
-        np.random.choice([False, True]),
-        np.random.random(),
-        np.random.choice([False, True])) for _ in xrange(N)]
-    data = np.array(data, dtype=[('',bool), ('',bool), ('',float), ('',bool)])
+    data = [mkrow() for _ in xrange(N)]
+    data = np.array(data, dtype=dtype)
 
     py_egid = py_s.create_group()
     assert py_egid == 0
@@ -79,3 +91,21 @@ def test_operations():
         cxx_s.remove_value(i, yi, R)
 
     assert_suff_stats_equal()
+
+    py_s.create_group()
+    cxx_s.create_group(R)
+
+    newrow = mkrow()
+    newdata = np.array([newrow], dtype=dtype)
+
+    py_score = py_s.score_value(newdata[0])
+    cxx_score = cxx_s.score_value(newdata[0], R)
+
+    # XXX: technically this need not be true, but it is true for our implementations
+    assert py_score[0] == cxx_score[0]
+
+    # the scores won't be that close since the python one uses double precision
+    # whereas the c++ one uses single precision
+    assert_1darray_almst_equals(
+        scores_to_probs(py_score[1]),
+        scores_to_probs(cxx_score[1]), places=2)

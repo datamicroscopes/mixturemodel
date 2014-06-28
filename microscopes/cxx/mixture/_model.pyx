@@ -139,7 +139,12 @@ cdef class state:
         self._thisptr[0].remove_value(eid, acc, r._thisptr[0])
 
     def score_value(self, y, rng r):
-        pass
+        cdef numpy_dataview view = get_dataview_for(y)
+        cdef row_accessor acc = view._thisptr[0].get()
+        cdef pair[vector[size_t], vector[float]] ret = self._thisptr[0].score_value(acc, r._thisptr[0])
+        ret0 = list(ret.first)
+        ret1 = np.array(list(ret.second))
+        return ret0, ret1
 
     def sample_post_pred(self, np.ndarray inp, rng rng, size=1):
         ret = [self._sample_post_pred_one(inp, rng) for _ in xrange(size)]
