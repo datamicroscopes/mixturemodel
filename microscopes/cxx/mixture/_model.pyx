@@ -146,6 +146,16 @@ cdef class state:
         ret1 = np.array(list(ret.second))
         return ret0, ret1
 
+    def score_data(self, features, rng r):
+        if features is None:
+            features = range(len(self._models))
+        elif type(features) == int:
+            features = [features]
+        cdef vector[size_t] f
+        for i in features:
+            f.push_back(i)
+        return self._thisptr[0].score_data(f, r._thisptr[0])
+
     def sample_post_pred(self, np.ndarray inp, rng rng, size=1):
         ret = [self._sample_post_pred_one(inp, rng) for _ in xrange(size)]
         return np.hstack(ret)

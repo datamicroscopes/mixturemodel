@@ -109,3 +109,8 @@ def test_operations():
     assert_1darray_almst_equals(
         scores_to_probs(py_score[1]),
         scores_to_probs(cxx_score[1]), places=2)
+
+    py_score = py_s.score_data(None)
+    cxx_score = cxx_s.score_data(None, R)
+
+    assert_almost_equals(py_score, cxx_score, places=2)

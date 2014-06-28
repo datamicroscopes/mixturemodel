@@ -150,25 +150,17 @@ state::score_value(row_accessor &acc, rng_t &rng) const
 
 float
 state::score_data(const vector<size_t> &features,
-                  const vector<size_t> &groups,
                   rng_t &rng) const
 {
   // XXX: out of laziness, we copy
   vector<size_t> fids(features);
   if (fids.empty())
     util::inplace_range(fids, models_.size());
-  vector<size_t> gids(groups);
-  if (gids.empty()) {
-    gids.reserve(groups_.size());
-    for (auto &g : groups_)
-      gids.push_back(g.first);
-  }
-
   float sum = 0.;
-  for (auto g : gids) {
-    const auto &gdata = groups_.at(g);
+  for (auto &g : groups_) {
+    const auto &gdata = g.second.second;
     for (auto f : fids)
-      sum += gdata.second[f]->score_data(*models_[f], rng);
+      sum += gdata[f]->score_data(*models_[f], rng);
   }
   return sum;
 }

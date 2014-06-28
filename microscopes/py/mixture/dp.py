@@ -114,7 +114,7 @@ class state(object):
         scores -= np.log(nentities + self._alpha)
         return idmap, scores
 
-    def score_data(self, features=None, groups=None):
+    def score_data(self, features=None):
         """
         computes log p(Y_{fi} | C) = \sum{k=1}^{K} log p(Y_{fi}^{k}),
         where Y_{fi}^{k} is the slice of data along the fi-th feature belonging to the
@@ -126,15 +126,8 @@ class state(object):
         elif type(features) == int:
             features = [features]
 
-        if groups is None:
-            groups = [gdata for _, (_, gdata) in self._groups.groupiter()]
-        elif type(groups) == int:
-            groups = [self._groups.group_data(groups)]
-        else:
-            groups = [self._groups.group_data(g) for g in groups]
-
         score = 0.0
-        for gdata in groups:
+        for _, (_, gdata) in self._groups.groupiter():
             for fi in features:
                 score += gdata[fi].score_data(self._featureshares[fi])
         return score
