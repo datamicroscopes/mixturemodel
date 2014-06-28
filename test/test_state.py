@@ -13,6 +13,7 @@ from microscopes.cxx.common.rng import rng
 
 import itertools as it
 import numpy as np
+import numpy.ma as ma
 
 from nose.tools import assert_almost_equals
 
@@ -114,3 +115,74 @@ def test_operations():
     cxx_score = cxx_s.score_data(None, R)
 
     assert_almost_equals(py_score, cxx_score, places=2)
+
+    # now try some masked data
+
+def test_sample_post_pred():
+    N = 10
+    R = rng(5483932)
+    D = 5
+
+    py_s = py_state(N, [py_bb]*D)
+    py_s.set_cluster_hp({'alpha':2.0})
+    for i in xrange(D):
+        py_s.set_feature_hp(i, py_bb.EXAMPLES[0]['shared'])
+
+    cxx_s = cxx_state(N, [cxx_bb]*D)
+    cxx_s.set_cluster_hp({'alpha':2.0})
+    for i in xrange(D):
+        cxx_s.set_feature_hp(i, py_bb.EXAMPLES[0]['shared'])
+
+    def randombool():
+        return np.random.choice([False, True])
+
+    def mkrow():
+        return tuple(randombool() for _ in xrange(D))
+
+    dtype = [('',bool)]*D
+
+    # non-masked data
+    data = [mkrow() for _ in xrange(N)]
+    data = np.array(data, dtype=dtype)
+
+    G = 3
+    for _ in xrange(G):
+        py_s.create_group()
+        cxx_s.create_group(R)
+
+    for i, yi in enumerate(data):
+        egid = i % G
+        py_s.add_value(egid, i, yi)
+        cxx_s.add_value(egid, i, yi, R)
+
+    def assert_suff_stats_equal():
+        for fid, gid in it.product(range(D), range(G)):
+            py_ss = py_s.get_suff_stats(gid, fid)
+            cxx_ss = cxx_s.get_suff_stats(gid, fid)
+            assert_dict_almost_equals(py_ss, cxx_ss)
+    assert_suff_stats_equal()
+
+    # sample
+    y_new_data = mkrow()
+    y_new_mask = [randombool() for _ in xrange(D)]
+    y_new = ma.masked_array(
+        np.array([y_new_data], dtype=dtype),
+        mask=y_new_data)[0]
+
+    n_samples = 1000
+
+    py_samples = py_s.sample_post_pred(y_new, n_samples)
+    cxx_samples = cxx_s.sample_post_pred(y_new, n_samples, R)
+
+    idmap = { C : i for i, C in enumerate(it.product([False,True], repeat=D)) }
+    def todist(samples):
+        dist = np.zeros(len(idmap))
+        for s in samples:
+            dist[idmap[tuple(s)]] += 1.0
+        dist /= dist.sum()
+        return dist
+
+    py_dist = todist(py_samples)
+    cxx_dist = todist(cxx_samples)
+
+    assert_1darray_almst_equals(py_dist, cxx_dist, places=2)
