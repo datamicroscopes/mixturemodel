@@ -241,6 +241,7 @@ class state(object):
             else:
                 return y_new[i]
         return gid, np.array([tuple(map(pick, xrange(len(self._featuretypes))))], dtype=self._y_dtype)
+
     def score_assignment(self):
         """
         computes log p(C)
@@ -270,43 +271,3 @@ class state(object):
     #    reset to the same condition as upon construction
     #    """
     #    self._groups = FixedNGroupManager(self._groups.nentities())
-
-    #def bootstrap(self, it):
-    #    """
-    #    bootstraps assignments
-    #    """
-    #    assert not self.ngroups()
-    #    assert self._groups.no_entities_assigned()
-
-    #    ei0, y0 = next(it)
-    #    gid0 = self.create_group()
-    #    self.add_entity_to_group(gid0, ei0, y0)
-    #    empty_gid = self.create_group()
-    #    for ei, yi in it:
-    #        idmap, scores = self.score_value(yi)
-    #        gid = idmap[sample_discrete_log(scores)]
-    #        self.add_entity_to_group(gid, ei, yi)
-    #        if gid == empty_gid:
-    #            empty_gid = self.create_group()
-
-    #    assert self._groups.all_entities_assigned()
-
-    #def fill(self, clusters):
-    #    """
-    #    form a cluster assignment and sufficient statistics out of an given
-    #    clustering of N points.
-
-    #    useful to bootstrap a model as the ground truth model
-    #    """
-    #    assert not self.ngroups()
-    #    assert self._groups.no_entities_assigned()
-
-    #    counts = [c.shape[0] for c in clusters]
-    #    cumcounts = np.cumsum(counts)
-    #    gids = [self.create_group() for _ in xrange(len(clusters))]
-    #    for cid, (gid, data) in enumerate(zip(gids, clusters)):
-    #        off = cumcounts[cid-1] if cid else 0
-    #        for ei, yi in enumerate(data):
-    #            self.add_entity_to_group(gid, off + ei, yi)
-
-    #    assert self._groups.all_entities_assigned()
