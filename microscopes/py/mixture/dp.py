@@ -4,7 +4,7 @@ import numpy.ma as ma
 from microscopes.py.common.groups import FixedNGroupManager
 from distributions.dbg.random import sample_discrete_log, sample_discrete
 
-def sample(n, s):
+def sample(n, s, r=None):
     """
     sample n iid values from the generative process described by s
     """
@@ -39,6 +39,19 @@ def sample(n, s):
             samples[choice].append(new_sample(params))
     return tuple(np.array(ys, dtype=s.get_feature_dtypes()) for ys in samples), \
            tuple(cluster_params)
+
+def fill(s, clusters, r=None):
+    assert not s.ngroups()
+    assert (np.array(s.assignments(), dtype=np.int)==-1).all()
+    counts = [c.shape[0] for c in clusters]
+    cumcounts = np.cumsum(counts)
+    gids = [s.create_group(r) for _ in xrange(len(clusters))]
+    for cid, (gid, data) in enumerate(zip(gids, clusters)):
+        off = cumcounts[cid-1] if cid else 0
+        for ei, yi in enumerate(data):
+            s.add_value(gid, off + ei, yi, r)
+    assert not (np.array(s.assignments(), dtype=np.int)==-1).any()
+    return s
 
 class state(object):
     """

@@ -1,5 +1,5 @@
 from distributions.dbg.models import bb as py_bb
-from microscopes.py.mixture.dp import state as py_state, sample as py_sample
+from microscopes.py.mixture.dp import state as py_state, fill as py_fill, sample as py_sample
 from microscopes.cxx.models import bb as cxx_bb
 from microscopes.cxx.common.rng import rng
 from microscopes.cxx.mixture.model import state as cxx_state
@@ -12,19 +12,6 @@ import itertools as it
 
 from nose.plugins.attrib import attr
 from nose.tools import assert_almost_equals
-
-def fill_state(s, clusters, r):
-    assert not s.ngroups()
-    assert (np.array(s.assignments(), dtype=np.int)==-1).all()
-    counts = [c.shape[0] for c in clusters]
-    cumcounts = np.cumsum(counts)
-    gids = [s.create_group(r) for _ in xrange(len(clusters))]
-    for cid, (gid, data) in enumerate(zip(gids, clusters)):
-        off = cumcounts[cid-1] if cid else 0
-        for ei, yi in enumerate(data):
-            s.add_value(gid, off + ei, yi, r)
-    assert not (np.array(s.assignments(), dtype=np.int)==-1).any()
-    return s
 
 N, D = 1000, 5
 
@@ -44,7 +31,7 @@ def _test_sample_post_pred(ctor, bbtype, y_new, r):
     Y = np.hstack(Y_clustered)
     assert Y.shape[0] == N
 
-    fill_state(s, Y_clustered, r)
+    py_fill(s, Y_clustered, r)
 
     n_samples = 10000
     Y_samples = [s.sample_post_pred(None, r)[1] for _ in xrange(n_samples)]
