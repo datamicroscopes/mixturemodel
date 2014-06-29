@@ -4,7 +4,49 @@ import numpy.ma as ma
 from microscopes.py.common.groups import FixedNGroupManager
 from distributions.dbg.random import sample_discrete_log, sample_discrete
 
+def sample(n, s):
+    """
+    sample n iid values from the generative process described by s
+    """
+    cluster_counts = np.array([1], dtype=np.int)
+    featuretypes = s.get_feature_types()
+    featureshares = [t.Shared() for t in featuretypes]
+    for i in xrange(len(featuretypes)):
+        featureshares[i].load(s.get_feature_hp(i))
+    def init_sampler(arg):
+        typ, s = arg
+        samp = typ.Sampler()
+        samp.init(s)
+        return samp
+    def new_cluster_params():
+        return tuple(map(init_sampler, zip(featuretypes, featureshares)))
+    def new_sample(params):
+        data = tuple(samp.eval(s) for samp, s in zip(params, featureshares))
+        return data
+    alpha = s.get_cluster_hp()['alpha']
+    cluster_params = [new_cluster_params()]
+    samples = [[new_sample(cluster_params[-1])]]
+    for _ in xrange(1, n):
+        dist = np.append(cluster_counts, alpha).astype(np.float, copy=False)
+        choice = sample_discrete(dist)
+        if choice == len(cluster_counts):
+            cluster_counts = np.append(cluster_counts, 1)
+            cluster_params.append(new_cluster_params())
+            samples.append([new_sample(cluster_params[-1])])
+        else:
+            cluster_counts[choice] += 1
+            params = cluster_params[choice]
+            samples[choice].append(new_sample(params))
+    return tuple(np.array(ys, dtype=s.get_feature_dtypes()) for ys in samples), \
+           tuple(cluster_params)
+
 class state(object):
+    """
+    state object API current has an (optional) unused random parameter, to make
+    it conform to the C++ API. at some point we should thread the
+    randomness through the python implementation (which is trickier since
+    the underlying distributions python objects don't bother)
+    """
 
     def __init__(self, n, featuretypes):
         self._groups = FixedNGroupManager(n)
@@ -24,6 +66,12 @@ class state(object):
 
     def _mk_y_dtype(self):
         return [self._mk_dtype_desc(i) for i in xrange(len(self._featuretypes))]
+
+    def get_feature_types(self):
+        return list(self._featuretypes)
+
+    def get_feature_dtypes(self):
+        return list(self._y_dtype)
 
     def get_cluster_hp(self):
         return {'alpha':self._alpha}
@@ -58,6 +106,9 @@ class state(object):
     def nentities(self):
         return self._groups.nentities()
 
+    def nfeatures(self):
+        return len(self._featuretypes)
+
     def groupsize(self, gid):
         return self._groups.groupsize(gid)
 
@@ -67,7 +118,7 @@ class state(object):
     def groups(self):
         return [gid for gid, _ in self._groups.groupiter()]
 
-    def create_group(self):
+    def create_group(self, rng=None):
         """
         returns gid
         """
@@ -85,14 +136,14 @@ class state(object):
     def _mask(self, y):
         return y.mask if hasattr(y, 'mask') else self._nomask
 
-    def add_value(self, gid, eid, y):
+    def add_value(self, gid, eid, y, rng=None):
         gdata = self._groups.add_entity_to_group(gid, eid)
         mask = self._mask(y)
         for (g, s), (yi, mi) in zip(zip(gdata, self._featureshares), zip(y, mask)):
             if not mi:
                 g.add_value(s, yi)
 
-    def remove_value(self, eid, y):
+    def remove_value(self, eid, y, rng=None):
         """
         returns gid
         """
@@ -103,7 +154,7 @@ class state(object):
                 g.remove_value(s, yi)
         return gid
 
-    def score_value(self, y):
+    def score_value(self, y, rng=None):
         """
         returns idmap, scores
         """
@@ -123,7 +174,7 @@ class state(object):
         scores -= np.log(nentities + self._alpha)
         return idmap, scores
 
-    def score_data(self, features=None):
+    def score_data(self, features, rng=None):
         """
         computes log p(Y_{fi} | C) = \sum{k=1}^{K} log p(Y_{fi}^{k}),
         where Y_{fi}^{k} is the slice of data along the fi-th feature belonging to the
@@ -141,31 +192,7 @@ class state(object):
                 score += gdata[fi].score_data(self._featureshares[fi])
         return score
 
-    def score_assignment(self):
-        """
-        computes log p(C)
-        """
-        # CRP
-        lg_sum = 0.0
-        assignments = self._groups.assignments()
-        counts = { assignments[0] : 1 }
-        for i, ci in enumerate(assignments):
-            if i == 0:
-                continue
-            cnt = counts.get(ci, 0)
-            numer = cnt if cnt else self._alpha
-            denom = i + self._alpha
-            lg_sum += np.log(numer / denom)
-            counts[ci] = cnt + 1
-        return lg_sum
-
-    def score_joint(self):
-        """
-        computes log p(C, Y) = log p(C) + log p(Y|C)
-        """
-        return self.score_assignment() + self.score_data(features=None, groups=None)
-
-    def sample_post_pred(self, y_new):
+    def sample_post_pred(self, y_new, rng=None):
         """
         draw a sample from p(y_new | C, Y)
 
@@ -201,6 +228,29 @@ class state(object):
             else:
                 return y_new[i]
         return gid, np.array([tuple(map(pick, xrange(len(self._featuretypes))))], dtype=self._y_dtype)
+    def score_assignment(self):
+        """
+        computes log p(C)
+        """
+        # CRP
+        lg_sum = 0.0
+        assignments = self._groups.assignments()
+        counts = { assignments[0] : 1 }
+        for i, ci in enumerate(assignments):
+            if i == 0:
+                continue
+            cnt = counts.get(ci, 0)
+            numer = cnt if cnt else self._alpha
+            denom = i + self._alpha
+            lg_sum += np.log(numer / denom)
+            counts[ci] = cnt + 1
+        return lg_sum
+
+    def score_joint(self):
+        """
+        computes log p(C, Y) = log p(C) + log p(Y|C)
+        """
+        return self.score_assignment() + self.score_data(features=None, groups=None)
 
     #def reset(self):
     #    """
@@ -247,43 +297,3 @@ class state(object):
     #            self.add_entity_to_group(gid, off + ei, yi)
 
     #    assert self._groups.all_entities_assigned()
-
-
-    #def sample(self, n):
-    #    """
-    #    generate n iid samples from the underlying generative process described by this DirichletProcess.
-
-    #    does not affect the state of the DirichletProcess, and only depends on the prior parameters of the
-    #    DirichletProcess
-
-    #    returns a tuple of
-    #        (
-    #            k-length tuple of observations, where k is the # of sampled clusters from the CRP,
-    #            k-length tuple of cluster samplers
-    #        )
-    #    """
-    #    cluster_counts = np.array([1], dtype=np.int)
-    #    def init_sampler(arg):
-    #        typ, s = arg
-    #        samp = typ.Sampler()
-    #        samp.init(s)
-    #        return samp
-    #    def new_cluster_params():
-    #        return tuple(map(init_sampler, zip(self._featuretypes, self._featureshares)))
-    #    def new_sample(params):
-    #        data = tuple(samp.eval(s) for samp, s in zip(params, self._featureshares))
-    #        return data
-    #    cluster_params = [new_cluster_params()]
-    #    samples = [[new_sample(cluster_params[-1])]]
-    #    for _ in xrange(1, n):
-    #        dist = np.append(cluster_counts, self._alpha).astype(np.float, copy=False)
-    #        choice = sample_discrete(dist)
-    #        if choice == len(cluster_counts):
-    #            cluster_counts = np.append(cluster_counts, 1)
-    #            cluster_params.append(new_cluster_params())
-    #            samples.append([new_sample(cluster_params[-1])])
-    #        else:
-    #            cluster_counts[choice] += 1
-    #            params = cluster_params[choice]
-    #            samples[choice].append(new_sample(params))
-    #    return tuple(np.array(ys, dtype=self._y_dtype) for ys in samples), tuple(cluster_params)

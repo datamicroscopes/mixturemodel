@@ -112,6 +112,9 @@ cdef class state:
     def nentities(self):
         return self._thisptr[0].nentities()
 
+    def nfeatures(self):
+        return len(self._models)
+
     def groupsize(self, int gid):
         return self._thisptr[0].groupsize(gid)
 
@@ -158,8 +161,10 @@ cdef class state:
 
     def sample_post_pred(self, y_new, rng r):
         if y_new is None:
-            y_new = ma.zeros(len(self._models))
-            y_new[:] = ma.masked
+            D = self.nfeatures()
+            y_new = ma.masked_array(
+                np.array([tuple(0 for _ in xrange(D))], dtype=[('',int)]*D),
+                mask=[tuple(True for _ in xrange(D))])
 
         cdef numpy_dataview view = get_dataview_for(y_new)
         cdef row_accessor acc = view._thisptr[0].get()

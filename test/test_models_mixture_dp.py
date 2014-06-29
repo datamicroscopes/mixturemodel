@@ -1,6 +1,9 @@
-from distributions.dbg.models import bb
-from microscopes.py.mixture.dp import state
-from microscopes.py.common.util import almost_eq, KL_discrete
+from distributions.dbg.models import bb as py_bb
+from microscopes.py.mixture.dp import state as py_state, sample as py_sample
+from microscopes.cxx.models import bb as cxx_bb
+from microscopes.cxx.common.rng import rng
+from microscopes.cxx.mixture.model import state as cxx_state
+from microscopes.py.common.util import KL_discrete
 from scipy.misc import logsumexp
 
 import numpy as np
@@ -8,47 +11,62 @@ import numpy.ma as ma
 import itertools as it
 
 from nose.plugins.attrib import attr
+from nose.tools import assert_almost_equals
 
-def test_sample_post_pred_no_given_data():
-    D = 5
-    N = 1000
+def fill_state(s, clusters, r):
+    assert not s.ngroups()
+    assert (np.array(s.assignments(), dtype=np.int)==-1).all()
+    counts = [c.shape[0] for c in clusters]
+    cumcounts = np.cumsum(counts)
+    gids = [s.create_group(r) for _ in xrange(len(clusters))]
+    for cid, (gid, data) in enumerate(zip(gids, clusters)):
+        off = cumcounts[cid-1] if cid else 0
+        for ei, yi in enumerate(data):
+            s.add_value(gid, off + ei, yi, r)
+    assert not (np.array(s.assignments(), dtype=np.int)==-1).any()
+    return s
+
+N, D = 1000, 5
+
+def _test_sample_post_pred(ctor, bbtype, y_new, r):
     alpha = 2.0
-
-    mm = state(N, [bb]*D)
-    mm.set_cluster_hp({'alpha':alpha})
+    s = ctor(N, [bbtype]*D)
+    s.set_cluster_hp({'alpha':alpha})
     for i in xrange(D):
-        mm.set_feature_hp(i, {'alpha':1.,'beta':1.})
+        s.set_feature_hp(i, {'alpha':1.,'beta':1.})
 
-    Y_clustered, _ = mm.sample(N)
+    py_proto = py_state(N, [py_bb]*D)
+    py_proto.set_cluster_hp(s.get_cluster_hp())
+    for i in xrange(D):
+        py_proto.set_feature_hp(i, s.get_feature_hp(i))
+
+    Y_clustered, _ = py_sample(N, py_proto)
     Y = np.hstack(Y_clustered)
     assert Y.shape[0] == N
-    mm.fill(Y_clustered)
 
-    Y_samples = [mm.sample_post_pred(y_new=None) for _ in xrange(10000)]
+    fill_state(s, Y_clustered, r)
+
+    n_samples = 10000
+    Y_samples = [s.sample_post_pred(None, r)[1] for _ in xrange(n_samples)]
     Y_samples = np.hstack(Y_samples)
 
-    empty_groups = list(mm.empty_groups())
+    empty_groups = list(s.empty_groups())
     if len(empty_groups):
         for egid in empty_groups[1:]:
-            mm.delete_group(egid)
+            s.delete_group(egid)
     else:
-        mm.create_group()
-    assert len(mm.empty_groups()) == 1
+        s.create_group(r)
+    assert len(s.empty_groups()) == 1
 
     def score_post_pred(y):
-        """compute log p(y | C, Y)"""
-        def score_for_group(gid):
-            ck = mm.nentities_in_group(gid)
-            ctotal = mm.nentities()
-            top = ck if ck else alpha
-            score_assign = np.log(top/(ctotal + alpha))
-            score_value = sum(g.score_value(mm.get_feature_hp_shared(fi), yi) for fi, (g, yi) in enumerate(zip(mm.get_suff_stats_for_group(gid), y)))
-            return score_assign + score_value
-        return logsumexp(np.array([score_for_group(gid) for gid in mm.groups()]))
+        # XXX: the C++ API can only handle structural arrays for now
+        y = np.array([y], dtype=[('',bool)]*D)[0]
+        _, scores = s.score_value(y, r)
+        return logsumexp(scores)
 
     scores = np.array(list(map(score_post_pred, it.product([False, True], repeat=D))))
     scores = np.exp(scores)
-    assert almost_eq(scores.sum(), 1.0)
+    assert_almost_equals(scores.sum(), 1.0, places=3)
 
     # lazy man
     idmap = { y : i for i, y in enumerate(it.product([False, True], repeat=D)) }
@@ -57,7 +75,6 @@ def test_sample_post_pred_no_given_data():
     sample_hist = np.zeros(len(idmap), dtype=np.int)
     for y in Y_samples:
         sample_hist[idmap[tuple(y)]] += 1.
-    #print 'hist', sample_hist
 
     sample_hist = np.array(sample_hist, dtype=np.float) + smoothing
     sample_hist /= sample_hist.sum()
@@ -67,63 +84,24 @@ def test_sample_post_pred_no_given_data():
     kldiv = KL_discrete(scores, sample_hist)
     print 'KL:', kldiv
 
-    assert kldiv <= 0.05
+    assert kldiv <= 0.005
 
-def test_sample_post_pred_given_data():
-    D = 5
-    N = 1000
-    alpha = 2.0
+def test_py_sample_post_pred_no_given_data():
+    _test_sample_post_pred(py_state, py_bb, None, None)
 
-    mm = state(N, [bb]*D)
-    mm.set_cluster_hp({'alpha':alpha})
-    for i in xrange(D):
-        mm.set_feature_hp(i, {'alpha':1.,'beta':1.})
-
-    Y_clustered, _ = mm.sample(N)
-    Y = np.hstack(Y_clustered)
-    assert Y.shape[0] == N
-    mm.fill(Y_clustered)
-
+def test_py_sample_post_pred_given_data():
+    assert D == 5
     y_new = ma.masked_array(
         np.array([(True, False, True, True, True)], dtype=[('', np.bool)]*5),
         mask=[(False, False, True, True, True)])[0]
-    Y_samples = [mm.sample_post_pred(y_new=y_new) for _ in xrange(10000)]
-    Y_samples = np.hstack(Y_samples)
+    _test_sample_post_pred(py_state, py_bb, y_new, None)
 
-    def score_post_pred(y):
-        """compute log p(y | C, Y)"""
-        def score_for_group(gid):
-            ck = mm.nentities_in_group(gid)
-            ctotal = mm.nentities()
-            top = ck if ck else alpha
-            score_assign = np.log(top/(ctotal + alpha))
-            score_value = sum(g.score_value(mm.get_feature_hp_shared(fi), yi) for fi, (g, yi) in enumerate(zip(mm.get_suff_stats_for_group(gid), y)))
-            return score_assign + score_value
-        return logsumexp(np.array([score_for_group(gid) for gid in mm.groups()]))
+def test_cxx_sample_post_pred_no_given_data():
+    _test_sample_post_pred(cxx_state, cxx_bb, None, rng(7589))
 
-    # condition on (y_0, y_1) = (True, False)
-    datapoints = ((True, False) + yrest for yrest in it.product([False, True], repeat=3))
-
-    scores = np.array(list(map(score_post_pred, datapoints)))
-    scores -= logsumexp(scores)
-    scores = np.exp(scores)
-    assert almost_eq(scores.sum(), 1.0)
-
-    # lazy man
-    idmap = { y : i for i, y in enumerate(it.product([False, True], repeat=3)) }
-
-    smoothing = 1e-5
-    sample_hist = np.zeros(len(idmap), dtype=np.int)
-    for y in Y_samples:
-        sample_hist[idmap[tuple(y)[2:]]] += 1.
-    #print 'hist', sample_hist
-
-    sample_hist = np.array(sample_hist, dtype=np.float) + smoothing
-    sample_hist /= sample_hist.sum()
-
-    print 'actual', scores
-    print 'emp', sample_hist
-    kldiv = KL_discrete(scores, sample_hist)
-    print 'KL:', kldiv
-
-    assert kldiv <= 0.05
+def test_cxx_sample_post_pred_given_data():
+    assert D == 5
+    y_new = ma.masked_array(
+        np.array([(True, False, True, True, True)], dtype=[('', np.bool)]*5),
+        mask=[(False, False, True, True, True)])[0]
+    _test_sample_post_pred(cxx_state, cxx_bb, None, rng(543234))
