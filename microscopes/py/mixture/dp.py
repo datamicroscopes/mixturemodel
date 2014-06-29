@@ -266,8 +266,8 @@ class state(object):
         """
         return self.score_assignment() + self.score_data(features=None, groups=None)
 
-    #def reset(self):
-    #    """
-    #    reset to the same condition as upon construction
-    #    """
-    #    self._groups = FixedNGroupManager(self._groups.nentities())
+    def reset(self):
+        """
+        reset to the same condition as upon construction
+        """
+        self._groups = FixedNGroupManager(self.nentities())
