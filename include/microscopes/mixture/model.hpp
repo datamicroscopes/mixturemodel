@@ -64,6 +64,12 @@ public:
     models_[i]->set_hp(hp);
   }
 
+  void
+  set_feature_hp(size_t i, const models::model &m)
+  {
+    models_[i]->set_hp(m);
+  }
+
   common::suffstats_bag_t
   get_suff_stats(size_t gid, size_t fid) const
   {
