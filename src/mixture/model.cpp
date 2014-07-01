@@ -79,6 +79,7 @@ state::add_value(size_t gid, size_t eid, common::row_accessor &acc, common::rng_
   if (!it->second.first++) {
     MICROSCOPES_ASSERT(gempty_.count(gid));
     gempty_.erase(gid);
+    MICROSCOPES_ASSERT(!gempty_.count(gid));
   } else {
     MICROSCOPES_ASSERT(!gempty_.count(gid));
   }
@@ -205,7 +206,7 @@ state::dcheck_consistency() const
     if (assignments_[i] == -1)
       continue;
     MICROSCOPES_DCHECK(assignments_[i] >= 0, "invalid negative assignment found");
-    MICROSCOPES_DCHECK(gempty_.count(assignments_[i]) > 0, "assigned element in empty group");
+    MICROSCOPES_DCHECK(!gempty_.count(assignments_[i]), "assigned element in empty group");
     MICROSCOPES_DCHECK(groups_.find(assignments_[i]) != groups_.end(), "assigned to non-existent group");
     counts[assignments_[i]]++;
   }

@@ -17,6 +17,7 @@ import itertools as it
 import numpy as np
 import numpy.ma as ma
 
+from nose.plugins.attrib import attr
 from nose.tools import assert_almost_equals
 
 def assert_dict_almost_equals(a, b):
@@ -79,21 +80,26 @@ def test_operations():
     cxx_egid = cxx_s.create_group(R)
     assert cxx_egid == 1
 
+    py_s.dcheck_consistency()
+    cxx_s.dcheck_consistency()
+
     assert py_s.ngroups() == 2 and set(py_s.empty_groups()) == set([0, 1])
     assert cxx_s.ngroups() == 2 and set(cxx_s.empty_groups()) == set([0, 1])
 
     for i, yi in enumerate(data):
         egid = i % 2
         py_s.add_value(egid, i, yi)
+        py_s.dcheck_consistency()
         cxx_s.add_value(egid, i, yi, R)
+        cxx_s.dcheck_consistency()
 
-    py_s.dcheck_consistency()
-    cxx_s.dcheck_consistency()
     assert_suff_stats_equal(py_s, cxx_s, features=range(4), groups=range(2))
 
     for i, yi in it.islice(enumerate(data), 2):
         py_s.remove_value(i, yi)
+        py_s.dcheck_consistency()
         cxx_s.remove_value(i, yi, R)
+        cxx_s.dcheck_consistency()
 
     assert_suff_stats_equal(py_s, cxx_s, features=range(4), groups=range(2))
 
@@ -162,12 +168,16 @@ def test_masked_operations():
         egid = i % 2
         py_s.add_value(egid, i, yi)
         cxx_s.add_value(egid, i, yi, R)
+        py_s.dcheck_consistency()
+        cxx_s.dcheck_consistency()
 
     assert_suff_stats_equal(py_s, cxx_s, features=range(3), groups=range(3))
 
     for i, yi in enumerate(data):
         py_s.remove_value(i, yi)
         cxx_s.remove_value(i, yi, R)
+        py_s.dcheck_consistency()
+        cxx_s.dcheck_consistency()
 
     assert_suff_stats_equal(py_s, cxx_s, features=range(3), groups=range(3))
 
