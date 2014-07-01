@@ -70,6 +70,12 @@ public:
     models_[i]->set_hp(m);
   }
 
+  void *
+  get_feature_hp_raw_ptr(size_t i, const std::string &key)
+  {
+    return models_[i]->get_hp_raw_ptr(key);
+  }
+
   common::suffstats_bag_t
   get_suff_stats(size_t gid, size_t fid) const
   {
