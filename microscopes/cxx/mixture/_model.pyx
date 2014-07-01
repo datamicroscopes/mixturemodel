@@ -139,7 +139,7 @@ cdef class state:
     def remove_value(self, int eid, y, rng r):
         cdef numpy_dataview view = get_dataview_for(y)
         cdef row_accessor acc = view._thisptr[0].get()
-        self._thisptr[0].remove_value(eid, acc, r._thisptr[0])
+        return self._thisptr[0].remove_value(eid, acc, r._thisptr[0])
 
     def score_value(self, y, rng r):
         cdef numpy_dataview view = get_dataview_for(y)
