@@ -11,6 +11,24 @@ using namespace microscopes::models;
 using namespace microscopes::mixture;
 
 size_t
+state::groupsize(size_t gid) const
+{
+  const auto it = groups_.find(gid);
+  MICROSCOPES_ASSERT(it != groups_.end());
+  return it->second.first;
+}
+
+vector<size_t>
+state::groups() const
+{
+  vector<size_t> ret;
+  ret.reserve(ngroups());
+  for (auto &g : groups_)
+    ret.push_back(g.first);
+  return move(ret);
+}
+
+size_t
 state::create_group(rng_t &rng)
 {
   vector<shared_ptr<feature_group>> gdata;

@@ -109,23 +109,8 @@ public:
   inline size_t nentities() const { return assignments_.size(); }
   inline size_t ngroups() const { return groups_.size(); }
 
-  inline size_t
-  groupsize(size_t gid) const
-  {
-    const auto it = groups_.find(gid);
-    MICROSCOPES_ASSERT(it != groups_.end());
-    return it->second.first;
-  }
-
-  inline std::vector<size_t>
-  groups() const
-  {
-    std::vector<size_t> ret;
-    ret.reserve(ngroups());
-    for (auto &g : groups_)
-      ret.push_back(g.first);
-    return ret;
-  }
+  size_t groupsize(size_t gid) const;
+  std::vector<size_t> groups() const;
 
   size_t create_group(common::rng_t &rng);
   void delete_group(size_t gid);
