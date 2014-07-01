@@ -11,6 +11,8 @@ CXXFLAGS += -I$(TOP)/../common/include
 CXXFLAGS += -I$(TOP)/../mixturemodel/include
 ifneq ($(strip $(DEBUG)),1)
 	CXXFLAGS += -O3 -DNDEBUG
+else
+	CXXFLAGS += -DDEBUG_MODE
 endif
 ifneq ($(strip $(DISTRIBUTIONS_INC)),)
 	CXXFLAGS += -I$(DISTRIBUTIONS_INC)

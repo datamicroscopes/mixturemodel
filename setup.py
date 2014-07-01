@@ -35,11 +35,12 @@ if LooseVersion(cython_version) < LooseVersion(min_cython_version):
     raise ValueError(
         'cython support requires cython>={}'.format(min_cython_version))
 
-distributions_inc, distributions_lib = None, None
+distributions_inc, distributions_lib, debug_build = None, None, False
 try:
     config = parse_makefile('../config.mk')
     distributions_inc = config.get('DISTRIBUTIONS_INC', None)
     distributions_lib = config.get('DISTRIBUTIONS_LIB', None)
+    debug_build = config.get('DEBUG', 0) == 1
 except IOError:
     pass
 
@@ -47,6 +48,8 @@ if distributions_inc is not None:
     print 'Using distributions_inc:', distributions_inc
 if distributions_lib is not None:
     print 'Using distributions_lib:', distributions_lib
+if debug_build:
+    print 'Debug build'
 
 extra_compile_args = ['-std=c++0x']
 if clang:
@@ -54,6 +57,8 @@ if clang:
         '-mmacosx-version-min=10.7',  # for anaconda
         '-stdlib=libc++',
     ])
+if debug_build:
+    extra_compile_args.append('-DDEBUG_MODE')
 
 extra_include_dirs = []
 if distributions_inc is not None:

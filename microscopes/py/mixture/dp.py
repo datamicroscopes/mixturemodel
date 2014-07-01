@@ -271,3 +271,7 @@ class state(object):
         reset to the same condition as upon construction
         """
         self._groups = FixedNGroupManager(self.nentities())
+
+    def dcheck_consistency(self):
+        # XXX: TODO
+        pass

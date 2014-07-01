@@ -22,7 +22,7 @@ cdef extern from "microscopes/mixture/model.hpp" namespace "microscopes::mixture
         suffstats_bag_t get_suff_stats(size_t, size_t) except +
         void set_suff_stats(size_t, size_t, suffstats_bag_t &) except +
 
-        vector[ssize_t] & assignments() 
+        vector[ssize_t] & assignments()
         set[size_t] & empty_groups()
 
         size_t nentities()
@@ -39,5 +39,8 @@ cdef extern from "microscopes/mixture/model.hpp" namespace "microscopes::mixture
         float score_data(vector[size_t] &, rng_t &) except +
 
         void ensure_k_empty_groups(size_t, rng_t &) except +
-        size_t sample_post_pred(row_accessor &, row_mutator &, rng_t &) except +	
+        size_t sample_post_pred(row_accessor &, row_mutator &, rng_t &) except +
         vector[runtime_type_info] get_runtime_type_info() except +
+
+        # for debugging purposes
+        void dcheck_consistency() except +

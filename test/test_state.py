@@ -87,6 +87,8 @@ def test_operations():
         py_s.add_value(egid, i, yi)
         cxx_s.add_value(egid, i, yi, R)
 
+    py_s.dcheck_consistency()
+    cxx_s.dcheck_consistency()
     assert_suff_stats_equal(py_s, cxx_s, features=range(4), groups=range(2))
 
     for i, yi in it.islice(enumerate(data), 2):
@@ -117,6 +119,8 @@ def test_operations():
     cxx_score = cxx_s.score_data(None, R)
 
     assert_almost_equals(py_score, cxx_score, places=2)
+    py_s.dcheck_consistency()
+    cxx_s.dcheck_consistency()
 
 def test_masked_operations():
     N = 10

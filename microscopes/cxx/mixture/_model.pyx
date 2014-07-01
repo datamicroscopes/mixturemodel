@@ -193,3 +193,6 @@ cdef class state:
         gid = self._thisptr[0].sample_post_pred(acc, mut, r._thisptr[0])
 
         return gid, out_npd
+
+    def dcheck_consistency(self):
+        self._thisptr[0].dcheck_consistency()

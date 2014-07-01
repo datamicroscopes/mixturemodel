@@ -2,9 +2,9 @@
 
 #include <microscopes/models/base.hpp>
 #include <microscopes/common/typedefs.hpp>
+#include <microscopes/common/assert.hpp>
 #include <microscopes/io/schema.pb.h>
 
-#include <cassert>
 #include <cmath>
 #include <vector>
 #include <set>
@@ -80,8 +80,8 @@ public:
   get_suff_stats(size_t gid, size_t fid) const
   {
     const auto it = groups_.find(gid);
-    assert(it != groups_.end());
-    assert(fid < it->second.second.size());
+    MICROSCOPES_ASSERT(it != groups_.end());
+    MICROSCOPES_ASSERT(fid < it->second.second.size());
     return it->second.second[fid]->get_ss();
   }
 
@@ -89,8 +89,8 @@ public:
   set_suff_stats(size_t gid, size_t fid, const common::suffstats_bag_t &ss)
   {
     const auto it = groups_.find(gid);
-    assert(it != groups_.end());
-    assert(fid < it->second.second.size());
+    MICROSCOPES_ASSERT(it != groups_.end());
+    MICROSCOPES_ASSERT(fid < it->second.second.size());
     it->second.second[fid]->set_ss(ss);
   }
 
@@ -113,7 +113,7 @@ public:
   groupsize(size_t gid) const
   {
     const auto it = groups_.find(gid);
-    assert(it != groups_.end());
+    MICROSCOPES_ASSERT(it != groups_.end());
     return it->second.first;
   }
 
@@ -150,9 +150,11 @@ public:
   std::vector< runtime_type_info >
   get_runtime_type_info() const;
 
-
   // XXX: we assume the caller has taken care to set the groups correctly!
   size_t sample_post_pred(common::row_accessor &acc, common::row_mutator &mut, common::rng_t &rng) const;
+
+  // for debugging purposes
+  void dcheck_consistency() const;
 
   // random statistics
   inline size_t groups_created() const { return gcount_; }

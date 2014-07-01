@@ -1,8 +1,8 @@
 #include <microscopes/mixture/model.hpp>
 #include <microscopes/common/macros.hpp>
+#include <microscopes/common/assert.hpp>
 #include <microscopes/common/util.hpp>
 
-#include <cassert>
 #include <iostream>
 
 using namespace std;
@@ -19,7 +19,7 @@ state::create_group(rng_t &rng)
     gdata.emplace_back(m->create_feature_group(rng));
   const size_t gid = gcount_++;
   groups_[gid] = move(make_pair(0, move(gdata)));
-  assert(!gempty_.count(gid));
+  MICROSCOPES_ASSERT(!gempty_.count(gid));
   gempty_.insert(gid);
   return gid;
 }
@@ -28,9 +28,9 @@ void
 state::delete_group(size_t gid)
 {
   auto it = groups_.find(gid);
-  assert(it != groups_.end());
-  assert(!it->second.first);
-  assert(gempty_.count(gid));
+  MICROSCOPES_ASSERT(it != groups_.end());
+  MICROSCOPES_ASSERT(!it->second.first);
+  MICROSCOPES_ASSERT(gempty_.count(gid));
   groups_.erase(it);
   gempty_.erase(gid);
   gremoved_++;
@@ -48,7 +48,7 @@ state::ensure_k_empty_groups(size_t k, rng_t &rng)
     delete_group(egid);
   for (size_t i = 0; i < k; i++)
     create_group(rng);
-  assert( empty_groups().size() == k );
+  MICROSCOPES_ASSERT( empty_groups().size() == k );
 }
 
 vector<runtime_type_info>
@@ -64,7 +64,7 @@ state::get_runtime_type_info() const
 void
 state::add_value(size_t gid, const dataview &view, rng_t &rng)
 {
-  assert(view.size() == assignments_.size());
+  MICROSCOPES_ASSERT(view.size() == assignments_.size());
   row_accessor acc = view.get();
   const size_t eid = view.index();
   add_value(gid, eid, acc, rng);
@@ -73,17 +73,17 @@ state::add_value(size_t gid, const dataview &view, rng_t &rng)
 void
 state::add_value(size_t gid, size_t eid, common::row_accessor &acc, common::rng_t &rng)
 {
-  assert(assignments_.at(eid) == -1);
+  MICROSCOPES_ASSERT(assignments_.at(eid) == -1);
   auto it = groups_.find(gid);
-  assert(it != groups_.end());
+  MICROSCOPES_ASSERT(it != groups_.end());
   if (!it->second.first++) {
-    assert(gempty_.count(gid));
+    MICROSCOPES_ASSERT(gempty_.count(gid));
     gempty_.erase(gid);
   } else {
-    assert(!gempty_.count(gid));
+    MICROSCOPES_ASSERT(!gempty_.count(gid));
   }
   acc.reset();
-  assert(acc.nfeatures() == it->second.second.size());
+  MICROSCOPES_ASSERT(acc.nfeatures() == it->second.second.size());
   for (size_t i = 0; i < acc.nfeatures(); i++, acc.bump()) {
     if (unlikely(acc.ismasked()))
       continue;
@@ -95,7 +95,7 @@ state::add_value(size_t gid, size_t eid, common::row_accessor &acc, common::rng_
 size_t
 state::remove_value(const common::dataview &view, rng_t &rng)
 {
-  assert(view.size() == assignments_.size());
+  MICROSCOPES_ASSERT(view.size() == assignments_.size());
   row_accessor acc = view.get();
   const size_t eid = view.index();
   return remove_value(eid, acc, rng);
@@ -104,15 +104,15 @@ state::remove_value(const common::dataview &view, rng_t &rng)
 size_t
 state::remove_value(size_t eid, common::row_accessor &acc, common::rng_t &rng)
 {
-  assert(assignments_.at(eid) != -1);
+  MICROSCOPES_ASSERT(assignments_.at(eid) != -1);
   const size_t gid = assignments_[eid];
   auto it = groups_.find(gid);
-  assert(it != groups_.end());
-  assert(!gempty_.count(gid));
+  MICROSCOPES_ASSERT(it != groups_.end());
+  MICROSCOPES_ASSERT(!gempty_.count(gid));
   if (!--it->second.first)
     gempty_.insert(gid);
   acc.reset();
-  assert(acc.nfeatures() == it->second.second.size());
+  MICROSCOPES_ASSERT(acc.nfeatures() == it->second.second.size());
   for (size_t i = 0; i < acc.nfeatures(); i++, acc.bump()) {
     if (unlikely(acc.ismasked()))
       continue;
@@ -127,7 +127,7 @@ state::score_value(row_accessor &acc, rng_t &rng) const
 {
   pair<vector<size_t>, vector<float>> ret;
   const size_t n_empty_groups = gempty_.size();
-  assert(n_empty_groups);
+  MICROSCOPES_ASSERT(n_empty_groups);
   const float empty_group_alpha = alpha_ / float(n_empty_groups);
   size_t count = 0;
   for (auto &group : groups_) {
@@ -170,7 +170,7 @@ state::sample_post_pred(row_accessor &acc,
                         row_mutator &mut,
                         rng_t &rng) const
 {
-  assert(acc.nfeatures() == mut.nfeatures());
+  MICROSCOPES_ASSERT(acc.nfeatures() == mut.nfeatures());
   auto scores = score_value(acc, rng);
   const auto choice = scores.first[util::sample_discrete_log(scores.second, rng)];
   const auto &gdata = groups_.at(choice).second;
@@ -191,4 +191,40 @@ state::sample_post_pred(row_accessor &acc,
   }
 
   return choice;
+}
+
+void
+state::dcheck_consistency() const
+{
+  MICROSCOPES_DCHECK(gcount_ >= gremoved_, "created is not >= removed");
+  MICROSCOPES_DCHECK(alpha_ > 0.0, "cluster HP <= 0.0");
+
+  // check the assignments are all valid
+  map<size_t, size_t> counts;
+  for (size_t i = 0; i < assignments_.size(); i++) {
+    if (assignments_[i] == -1)
+      continue;
+    MICROSCOPES_DCHECK(assignments_[i] >= 0, "invalid negative assignment found");
+    MICROSCOPES_DCHECK(gempty_.count(assignments_[i]) > 0, "assigned element in empty group");
+    MICROSCOPES_DCHECK(groups_.find(assignments_[i]) != groups_.end(), "assigned to non-existent group");
+    counts[assignments_[i]]++;
+  }
+
+  // every group in gempty_ should appear in groups_, but empty
+  for (auto g : gempty_) {
+    const auto it = groups_.find(g);
+    MICROSCOPES_DCHECK(it != groups_.end(), "non-existent group in empty groups list");
+    MICROSCOPES_DCHECK(it->second.first == 0, "empty group is not empty");
+    // XXX: need a way to tell suff stats are actually empty!
+  }
+
+  for (auto g : groups_) {
+    if (!g.second.first) {
+      MICROSCOPES_DCHECK(gempty_.count(g.first), "empty group not accounted for in gempty_");
+      MICROSCOPES_DCHECK(counts.find(g.first) == counts.end(), "empty group not empty");
+    } else {
+      MICROSCOPES_DCHECK(!gempty_.count(g.first), "non-empty group found in gempty_");
+      MICROSCOPES_DCHECK(counts.at(g.first) == g.second.first, "assignments disagree");
+    }
+  }
 }
