@@ -126,10 +126,9 @@ public:
 
   float score_data(const std::vector<size_t> &features, common::rng_t &rng) const;
 
-
   // XXX: helper function, move to outer mixturemodel once we
   // abstract better
-  void ensure_k_empty_groups(size_t k, common::rng_t &rng);
+  void ensure_k_empty_groups(size_t k, bool resample, common::rng_t &rng);
 
   // XXX: also doesn't belong here
   std::vector< runtime_type_info >

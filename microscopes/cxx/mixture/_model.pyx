@@ -170,7 +170,7 @@ cdef class state:
         cdef row_accessor acc = view._thisptr[0].get()
 
         # ensure the state has 1 empty group
-        self._thisptr[0].ensure_k_empty_groups(1, r._thisptr[0])
+        self._thisptr[0].ensure_k_empty_groups(1, False, r._thisptr[0])
 
         out_ctypes = self._thisptr[0].get_runtime_type_info()
         out_dtype = []

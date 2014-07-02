@@ -2,6 +2,7 @@ from libcpp.vector cimport vector
 from libcpp.string cimport string
 from libcpp.utility cimport pair
 from libcpp.set cimport set
+from libcpp cimport bool as cbool
 from libc.stddef cimport size_t
 
 from microscopes._shared_ptr_h cimport shared_ptr
@@ -38,7 +39,7 @@ cdef extern from "microscopes/mixture/model.hpp" namespace "microscopes::mixture
         pair[vector[size_t], vector[float]] score_value(row_accessor &, rng_t &) except +
         float score_data(vector[size_t] &, rng_t &) except +
 
-        void ensure_k_empty_groups(size_t, rng_t &) except +
+        void ensure_k_empty_groups(size_t, cbool, rng_t &) except +
         size_t sample_post_pred(row_accessor &, row_mutator &, rng_t &) except +
         vector[runtime_type_info] get_runtime_type_info() except +
 

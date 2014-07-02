@@ -55,15 +55,29 @@ state::delete_group(size_t gid)
 }
 
 void
-state::ensure_k_empty_groups(size_t k, rng_t &rng)
+state::ensure_k_empty_groups(size_t k, bool resample, rng_t &rng)
 {
-  // XXX: should allow for resampling
-  if (empty_groups().size() == k)
+  if (resample) {
+    // delete all empty groups
+    const vector<size_t> egids(gempty_.begin(), gempty_.end());
+    for (auto egid : egids)
+      delete_group(egid);
+  }
+  const size_t esize = empty_groups().size();
+  if (esize == k)
     return;
-  // XXX: NOT EFFICIENT
-  vector<size_t> egids(gempty_.begin(), gempty_.end());
-  for (auto egid : egids)
-    delete_group(egid);
+  else if (esize > k) {
+    // set iterators do not support iter + size_type
+    auto it = gempty_.cbegin();
+    for (size_t i = 0; i < (esize-k); ++i, ++it)
+      ;
+    const vector<size_t> egids(it, gempty_.cend());
+    for (auto egid : egids)
+      delete_group(egid);
+  } else {
+    for (size_t i = 0; i < (k-esize); i++)
+      create_group(rng);
+  }
   for (size_t i = 0; i < k; i++)
     create_group(rng);
   MICROSCOPES_ASSERT( empty_groups().size() == k );
