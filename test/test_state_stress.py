@@ -23,7 +23,7 @@ def _test_stress(ctor, bbmodel, R):
 
     y_value = np.array([(True,)], dtype=[('',bool)])[0]
 
-    nops = 10000
+    nops = 100
     while nops:
         assert len(s.groups()) >= 1
         choice = np.random.choice([CHANGE_GROUP, CHANGE_VALUE])
@@ -87,7 +87,7 @@ def _test_stress_sampler(ctor, bbmodel, R):
         s.create_group(R)
     assert len(s.empty_groups()) == 1
 
-    for i in np.random.permutation(Y.shape[0]):
+    for i in np.random.permutation(Y.shape[0])[:100]:
         egroups = s.empty_groups()
         assert len(egroups) == 1
         y = Y[i]

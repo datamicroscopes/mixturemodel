@@ -71,6 +71,12 @@ cdef class state:
     def __dealloc__(self):
         del self._thisptr
 
+    def get_feature_types(self):
+        return [x.get_py_type() for x, _ in self._models]
+
+    def get_feature_dtypes(self):
+        return [('', tpe.Value) for tpe in self.get_feature_types()]
+
     def get_cluster_hp(self):
         m = CRP()
         raw = str(self._thisptr[0].get_hp())
