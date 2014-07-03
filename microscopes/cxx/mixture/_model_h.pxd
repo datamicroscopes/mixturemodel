@@ -40,8 +40,11 @@ cdef extern from "microscopes/mixture/model.hpp" namespace "microscopes::mixture
         float score_data(vector[size_t] &, vector[size_t] &, rng_t &) except +
 
         void ensure_k_empty_groups(size_t, cbool, rng_t &) except +
-        size_t sample_post_pred(row_accessor &, row_mutator &, rng_t &) except +
         vector[runtime_type_info] get_runtime_type_info() except +
+
+        size_t sample_post_pred(row_accessor &, row_mutator &, rng_t &) except +
+        float score_assignment() except +
+        float score_joint(rng_t &) except +
 
         # for debugging purposes
         void dcheck_consistency() except +

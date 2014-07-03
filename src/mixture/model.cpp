@@ -2,10 +2,12 @@
 #include <microscopes/common/macros.hpp>
 #include <microscopes/common/assert.hpp>
 #include <microscopes/common/util.hpp>
+#include <distributions/special.hpp>
 
 #include <iostream>
 
 using namespace std;
+using namespace distributions;
 using namespace microscopes::common;
 using namespace microscopes::models;
 using namespace microscopes::mixture;
@@ -166,7 +168,7 @@ state::score_value(row_accessor &acc, rng_t &rng) const
   const float empty_group_alpha = alpha_ / float(n_empty_groups);
   size_t count = 0;
   for (auto &group : groups_) {
-    float sum = logf(group.second.first ? float(group.second.first) : empty_group_alpha);
+    float sum = fast_log(group.second.first ? float(group.second.first) : empty_group_alpha);
     acc.reset();
     for (size_t i = 0; i < acc.nfeatures(); i++, acc.bump()) {
       if (unlikely(acc.ismasked()))
@@ -177,7 +179,7 @@ state::score_value(row_accessor &acc, rng_t &rng) const
     ret.second.push_back(sum);
     count += group.second.first;
   }
-  const float lgnorm = logf(float(count) + alpha_);
+  const float lgnorm = fast_log(float(count) + alpha_);
   for (auto &s : ret.second)
     s -= lgnorm;
   return ret;
@@ -230,6 +232,29 @@ state::sample_post_pred(row_accessor &acc,
   }
 
   return choice;
+}
+
+float
+state::score_assignment() const
+{
+  map<size_t, size_t> counts;
+  MICROSCOPES_ASSERT(assignments_[0] != -1);
+  counts[assignments_[0]] = 1;
+  float sum = 0.;
+  for (size_t i = 1; i < assignments_.size(); i++) {
+    const ssize_t gid = assignments_[i];
+    MICROSCOPES_ASSERT(gid != -1);
+    const auto it = counts.find(gid);
+    const bool found = (it != counts.end());
+    const float numer = (!found) ? alpha_ : it->second;
+    const float denom = float(i) + alpha_;
+    sum += fast_log(numer / denom);
+    if (found)
+      it->second++;
+    else
+      counts[gid] = 1;
+  }
+  return sum;
 }
 
 void

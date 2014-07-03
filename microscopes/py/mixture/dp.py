@@ -267,7 +267,7 @@ class state(object):
         """
         computes log p(C, Y) = log p(C) + log p(Y|C)
         """
-        return self.score_assignment() + self.score_data(None)
+        return self.score_assignment() + self.score_data(None, None)
 
     def reset(self):
         """

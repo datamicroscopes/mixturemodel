@@ -205,5 +205,11 @@ cdef class state:
 
         return gid, out_npd
 
+    def score_assignment(self):
+        return self._thisptr[0].score_assignment()
+
+    def score_joint(self, rng r):
+        return self._thisptr[0].score_joint(r._thisptr[0])
+
     def dcheck_consistency(self):
         self._thisptr[0].dcheck_consistency()

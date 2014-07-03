@@ -142,6 +142,15 @@ public:
   // XXX: we assume the caller has taken care to set the groups correctly!
   size_t sample_post_pred(common::row_accessor &acc, common::row_mutator &mut, common::rng_t &rng) const;
 
+  float score_assignment() const;
+
+  inline float
+  score_joint(common::rng_t &rng) const
+  {
+    const std::vector<size_t> empty;
+    return score_assignment() + score_data(empty, empty, rng);
+  }
+
   // for debugging purposes
   void dcheck_consistency() const;
 

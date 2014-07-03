@@ -128,6 +128,8 @@ def test_operations():
     py_s.dcheck_consistency()
     cxx_s.dcheck_consistency()
 
+    assert_almost_equals(py_s.score_joint(), cxx_s.score_joint(R), places=2)
+
 def test_masked_operations():
     N = 10
     R = rng(2347785)
