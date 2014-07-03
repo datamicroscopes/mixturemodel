@@ -22,7 +22,7 @@ protobuf_to_string(const T &t)
 }
 
 int
-main(void)
+main(int argc, char **argv)
 {
   const size_t D = 28*28;
   rng_t r(5849343);
@@ -43,7 +43,8 @@ main(void)
   for (size_t i = 0; i < D; i++)
     s.set_feature_hp(i, protobuf_to_string(m_feature_hp));
 
-  const size_t G = 50;
+  const size_t G = strtoul(argv[1], nullptr, 10);
+  cout << "groups: " << G << endl;
 
   for (size_t i = 0; i < G; i++)
     s.create_group(r);
@@ -65,11 +66,16 @@ main(void)
   float sum = 0.0;
   const size_t NTRIALS = 60000;
   for (size_t i = 0; i < NTRIALS; i++) {
-    s.remove_value(10, acc, r);
+    const size_t gid = s.remove_value(10, acc, r);
+    s.delete_group(gid);
+    s.create_group(r);
     const auto p = s.score_value(acc, r);
     sum += p.first[1];
     sum += p.second[0];
-    s.add_value(G/2, 10, acc, r);
+    const auto groups = s.groups();
+    const vector<float> probs(groups.size(), 1./float(groups.size()));
+    const auto choice = util::sample_discrete(probs, r);
+    s.add_value(groups[choice], 10, acc, r);
   }
 
   cout << "meaningless: " << sum << endl;
