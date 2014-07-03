@@ -80,8 +80,6 @@ state::ensure_k_empty_groups(size_t k, bool resample, rng_t &rng)
     for (size_t i = 0; i < (k-esize); i++)
       create_group(rng);
   }
-  for (size_t i = 0; i < k; i++)
-    create_group(rng);
   MICROSCOPES_ASSERT( empty_groups().size() == k );
 }
 
