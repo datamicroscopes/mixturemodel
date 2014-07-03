@@ -149,15 +149,26 @@ cdef class state:
         ret1 = np.array(list(ret.second))
         return ret0, ret1
 
-    def score_data(self, features, rng r):
+    def score_data(self, features, groups, rng r):
         if features is None:
             features = range(len(self._models))
         elif type(features) == int:
             features = [features]
+
+        if groups is None:
+            groups = self.groups()
+        elif type(groups) == int:
+            groups = [groups]
+
         cdef vector[size_t] f
         for i in features:
             f.push_back(i)
-        return self._thisptr[0].score_data(f, r._thisptr[0])
+
+        cdef vector[size_t] g
+        for i in groups:
+            g.push_back(i)
+
+        return self._thisptr[0].score_data(f, g, r._thisptr[0])
 
     def sample_post_pred(self, y_new, rng r):
         if y_new is None:

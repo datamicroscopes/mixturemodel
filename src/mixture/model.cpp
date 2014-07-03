@@ -159,6 +159,8 @@ pair<vector<size_t>, vector<float>>
 state::score_value(row_accessor &acc, rng_t &rng) const
 {
   pair<vector<size_t>, vector<float>> ret;
+  ret.first.reserve(groups_.size());
+  ret.second.reserve(groups_.size());
   const size_t n_empty_groups = gempty_.size();
   MICROSCOPES_ASSERT(n_empty_groups);
   const float empty_group_alpha = alpha_ / float(n_empty_groups);
@@ -182,16 +184,20 @@ state::score_value(row_accessor &acc, rng_t &rng) const
 }
 
 float
-state::score_data(const vector<size_t> &features,
+state::score_data(const vector<size_t> &fs,
+                  const vector<size_t> &gs,
                   rng_t &rng) const
 {
   // XXX: out of laziness, we copy
-  vector<size_t> fids(features);
+  vector<size_t> fids(fs);
   if (fids.empty())
     util::inplace_range(fids, models_.size());
+  vector<size_t> gids(gs);
+  if (gids.empty())
+    gids = groups();
   float sum = 0.;
-  for (auto &g : groups_) {
-    const auto &gdata = g.second.second;
+  for (auto gid : gids) {
+    const auto &gdata = groups_.at(gid).second;
     for (auto f : fids)
       sum += gdata[f]->score_data(*models_[f], rng);
   }

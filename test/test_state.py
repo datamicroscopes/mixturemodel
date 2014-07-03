@@ -121,8 +121,8 @@ def test_operations():
         scores_to_probs(py_score[1]),
         scores_to_probs(cxx_score[1]), places=2)
 
-    py_score = py_s.score_data(None)
-    cxx_score = cxx_s.score_data(None, R)
+    py_score = py_s.score_data(None, None)
+    cxx_score = cxx_s.score_data(None, None, R)
 
     assert_almost_equals(py_score, cxx_score, places=2)
     py_s.dcheck_consistency()

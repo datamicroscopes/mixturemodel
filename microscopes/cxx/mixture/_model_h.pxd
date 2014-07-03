@@ -37,7 +37,7 @@ cdef extern from "microscopes/mixture/model.hpp" namespace "microscopes::mixture
         void add_value(size_t, size_t, row_accessor &, rng_t &) except +
         size_t remove_value(size_t, row_accessor &, rng_t &) except +
         pair[vector[size_t], vector[float]] score_value(row_accessor &, rng_t &) except +
-        float score_data(vector[size_t] &, rng_t &) except +
+        float score_data(vector[size_t] &, vector[size_t] &, rng_t &) except +
 
         void ensure_k_empty_groups(size_t, cbool, rng_t &) except +
         size_t sample_post_pred(row_accessor &, row_mutator &, rng_t &) except +

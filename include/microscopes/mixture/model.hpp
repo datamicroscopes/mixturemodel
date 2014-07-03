@@ -124,7 +124,12 @@ public:
   std::pair<std::vector<size_t>, std::vector<float>>
   score_value(common::row_accessor &acc, common::rng_t &rng) const;
 
-  float score_data(const std::vector<size_t> &features, common::rng_t &rng) const;
+  // accumulate (sum) score_data over the suff-stats of the cartesian-product
+  // of [features] x [groups]
+  float score_data(
+      const std::vector<size_t> &features,
+      const std::vector<size_t> &groups,
+      common::rng_t &rng) const;
 
   // XXX: helper function, move to outer mixturemodel once we
   // abstract better
