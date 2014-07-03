@@ -13,6 +13,7 @@
 #include <memory>
 #include <sstream>
 #include <utility>
+#include <stdexcept>
 
 namespace microscopes {
 namespace mixture {
@@ -33,7 +34,7 @@ public:
   {
   }
 
-  common::hyperparam_bag_t
+  inline common::hyperparam_bag_t
   get_hp() const
   {
     message_type m;
@@ -43,7 +44,7 @@ public:
     return out.str();
   }
 
-  void
+  inline void
   set_hp(const common::hyperparam_bag_t &hp)
   {
     std::istringstream inp(hp);
@@ -52,31 +53,39 @@ public:
     alpha_ = m.alpha();
   }
 
-  common::hyperparam_bag_t
+  inline void *
+  get_cluster_hp_raw_ptr(const std::string &key)
+  {
+    if (key == "alpha")
+      return &alpha_;
+    throw std::runtime_error("unknown key: " + key);
+  }
+
+  inline common::hyperparam_bag_t
   get_feature_hp(size_t i) const
   {
     return models_[i]->get_hp();
   }
 
-  void
+  inline void
   set_feature_hp(size_t i, const common::hyperparam_bag_t &hp)
   {
     models_[i]->set_hp(hp);
   }
 
-  void
+  inline void
   set_feature_hp(size_t i, const models::model &m)
   {
     models_[i]->set_hp(m);
   }
 
-  void *
+  inline void *
   get_feature_hp_raw_ptr(size_t i, const std::string &key)
   {
     return models_[i]->get_hp_raw_ptr(key);
   }
 
-  common::suffstats_bag_t
+  inline common::suffstats_bag_t
   get_suff_stats(size_t gid, size_t fid) const
   {
     const auto it = groups_.find(gid);
@@ -85,13 +94,22 @@ public:
     return it->second.second[fid]->get_ss();
   }
 
-  void
+  inline void
   set_suff_stats(size_t gid, size_t fid, const common::suffstats_bag_t &ss)
   {
     const auto it = groups_.find(gid);
     MICROSCOPES_ASSERT(it != groups_.end());
     MICROSCOPES_ASSERT(fid < it->second.second.size());
     it->second.second[fid]->set_ss(ss);
+  }
+
+  inline void *
+  get_suff_stats_raw_ptr(size_t gid, size_t fid, const std::string &key)
+  {
+    const auto it = groups_.find(gid);
+    MICROSCOPES_ASSERT(it != groups_.end());
+    MICROSCOPES_ASSERT(fid < it->second.second.size());
+    return it->second.second[fid]->get_ss_raw_ptr(key);
   }
 
   inline const std::vector<ssize_t> &
