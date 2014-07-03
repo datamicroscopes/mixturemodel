@@ -132,22 +132,26 @@ cdef class state:
         return g
 
     def create_group(self, rng r):
+        assert r
         return self._thisptr[0].create_group(r._thisptr[0])
 
     def delete_group(self, int gid):
         self._thisptr[0].delete_group(gid)
 
     def add_value(self, int gid, int eid, y, rng r):
+        assert r
         cdef numpy_dataview view = get_dataview_for(y)
         cdef row_accessor acc = view._thisptr[0].get()
         self._thisptr[0].add_value(gid, eid, acc, r._thisptr[0])
 
     def remove_value(self, int eid, y, rng r):
+        assert r
         cdef numpy_dataview view = get_dataview_for(y)
         cdef row_accessor acc = view._thisptr[0].get()
         return self._thisptr[0].remove_value(eid, acc, r._thisptr[0])
 
     def score_value(self, y, rng r):
+        assert r
         cdef numpy_dataview view = get_dataview_for(y)
         cdef row_accessor acc = view._thisptr[0].get()
         cdef pair[vector[size_t], vector[float]] ret = self._thisptr[0].score_value(acc, r._thisptr[0])
@@ -156,6 +160,7 @@ cdef class state:
         return ret0, ret1
 
     def score_data(self, features, groups, rng r):
+        assert r
         if features is None:
             features = range(len(self._models))
         elif type(features) == int:
@@ -177,6 +182,7 @@ cdef class state:
         return self._thisptr[0].score_data(f, g, r._thisptr[0])
 
     def sample_post_pred(self, y_new, rng r):
+        assert r
         if y_new is None:
             D = self.nfeatures()
             y_new = ma.masked_array(
@@ -215,6 +221,7 @@ cdef class state:
         return self._thisptr[0].score_assignment()
 
     def score_joint(self, rng r):
+        assert r
         return self._thisptr[0].score_joint(r._thisptr[0])
 
     def dcheck_consistency(self):
