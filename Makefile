@@ -65,3 +65,17 @@ clean:
 .PHONY: test
 test:
 	$(LIBPATH_VARNAME)=$$$(LIBPATH_VARNAME):../common/out:./out PYTHONPATH=$$PYTHONPATH:../common:. nosetests
+
+# test progs
+PROGS := $(wildcard test/cxx/*.cpp)
+OUTFILES := $(patsubst %.cpp, %.prog, $(PROGS))
+
+PROG_LDFLAGS := $(LDFLAGS)
+PROG_LDFLAGS += -L$(TOP)/out -Wl,-rpath,$(TOP)/out
+PROG_LDFLAGS += -lmicroscopes_mixturemodel
+
+%.prog: %.cpp $(O)/libmicroscopes_mixturemodel.so
+	$(CXX) $(CXXFLAGS) $< -o $@ $(PROG_LDFLAGS)
+
+.PHONY: test_cxx
+test_cxx: $(OUTFILES)
