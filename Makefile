@@ -34,10 +34,12 @@ LIBPATH_VARNAME :=
 ifeq ($(UNAME_S),Linux)
 	TARGETS := $(O)/libmicroscopes_mixturemodel.so
 	LIBPATH_VARNAME := LD_LIBRARY_PATH
+	EXTNAME := so
 endif
 ifeq ($(UNAME_S),Darwin)
 	TARGETS := $(O)/libmicroscopes_mixturemodel.dylib
 	LIBPATH_VARNAME := DYLD_LIBRARY_PATH
+	EXTNAME := dylib
 endif
 
 all: $(TARGETS)
@@ -59,7 +61,7 @@ endif
 
 .PHONY: clean
 clean: 
-	rm -rf out
+	rm -rf out test/cxx/*.{d,prog}
 	find microscopes \( -name '*.cpp' -or -name '*.so' -or -name '*.pyc' \) -type f -print0 | xargs -0 rm --
 
 .PHONY: test
@@ -74,7 +76,7 @@ PROG_LDFLAGS := $(LDFLAGS)
 PROG_LDFLAGS += -L$(TOP)/out -Wl,-rpath,$(TOP)/out
 PROG_LDFLAGS += -lmicroscopes_mixturemodel
 
-%.prog: %.cpp $(O)/libmicroscopes_mixturemodel.so
+%.prog: %.cpp $(O)/libmicroscopes_mixturemodel.$(EXTNAME)
 	$(CXX) $(CXXFLAGS) $< -o $@ $(PROG_LDFLAGS)
 
 .PHONY: test_cxx

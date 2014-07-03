@@ -1,5 +1,7 @@
 *.swp
 *.pyc
+*.d
+*.prog
 .DS_Store
 /config.mk
 /microscopes/**/*.so
