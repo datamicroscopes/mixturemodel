@@ -163,12 +163,12 @@ cdef class state:
         assert r
         if features is None:
             features = range(len(self._models))
-        elif type(features) == int:
+        elif not hasattr(features, '__iter__'):
             features = [features]
 
         if groups is None:
             groups = self.groups()
-        elif type(groups) == int:
+        elif not hasattr(groups, '__iter__'):
             groups = [groups]
 
         cdef vector[size_t] f

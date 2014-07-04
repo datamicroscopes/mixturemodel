@@ -123,8 +123,20 @@ def test_operations():
 
     py_score = py_s.score_data(None, None)
     cxx_score = cxx_s.score_data(None, None, R)
-
     assert_almost_equals(py_score, cxx_score, places=2)
+
+    py_score = py_s.score_data(0, 0)
+    cxx_score = cxx_s.score_data(0, 0, R)
+    assert_almost_equals(py_score, cxx_score, places=2)
+
+    py_score = py_s.score_data([0,1], [0])
+    cxx_score = cxx_s.score_data([0,1], [0], R)
+    assert_almost_equals(py_score, cxx_score, places=2)
+
+    py_score = py_s.score_data(np.array([0,1], dtype=np.int)[0], [0])
+    cxx_score = cxx_s.score_data(np.array([0,1], dtype=np.int)[0], [0], R)
+    assert_almost_equals(py_score, cxx_score, places=2)
+
     py_s.dcheck_consistency()
     cxx_s.dcheck_consistency()
 

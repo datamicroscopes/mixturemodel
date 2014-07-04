@@ -195,11 +195,11 @@ class state(object):
         """
         if features is None:
             features = np.arange(len(self._featuretypes))
-        elif type(features) == int:
+        elif not hasattr(features, '__iter__'):
             features = [features]
         if groups is None:
             groups = self.groups()
-        elif type(groups) == int:
+        elif not hasattr(groups, '__iter__'):
             groups = [groups]
         score = 0.0
         for gid in groups:
