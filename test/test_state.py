@@ -95,6 +95,8 @@ def test_operations():
 
     assert_suff_stats_equal(py_s, cxx_s, features=range(4), groups=range(2))
 
+    assert_almost_equals(py_s.score_joint(), cxx_s.score_joint(R), places=2)
+
     for i, yi in it.islice(enumerate(data), 2):
         py_s.remove_value(i, yi)
         py_s.dcheck_consistency()
@@ -139,8 +141,6 @@ def test_operations():
 
     py_s.dcheck_consistency()
     cxx_s.dcheck_consistency()
-
-    assert_almost_equals(py_s.score_joint(), cxx_s.score_joint(R), places=2)
 
 def test_masked_operations():
     N = 10
