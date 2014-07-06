@@ -83,13 +83,13 @@ state::ensure_k_empty_groups(size_t k, bool resample, rng_t &rng)
   MICROSCOPES_ASSERT( empty_groups().size() == k );
 }
 
-vector<runtime_type_info>
-state::get_runtime_type_info() const
+vector<runtime_type>
+state::get_runtime_types() const
 {
-  vector<runtime_type_info> ret;
+  vector<runtime_type> ret;
   ret.reserve(models_.size());
   for (const auto &m : models_)
-    ret.push_back(m->get_runtime_type_info());
+    ret.push_back(m->get_runtime_type());
   return ret;
 }
 
@@ -118,7 +118,10 @@ state::add_value(size_t gid, size_t eid, common::row_accessor &acc, common::rng_
   acc.reset();
   MICROSCOPES_ASSERT(acc.nfeatures() == it->second.second.size());
   for (size_t i = 0; i < acc.nfeatures(); i++, acc.bump()) {
-    if (unlikely(acc.ismasked()))
+    // XXX: currently, multi-dimensional features are all or nothing; if any of
+    // the individual values are masked, we treat the whole feature value as
+    // masked
+    if (unlikely(acc.anymasked()))
       continue;
     it->second.second[i]->add_value(*models_[i], acc, rng);
   }
@@ -147,7 +150,8 @@ state::remove_value(size_t eid, common::row_accessor &acc, common::rng_t &rng)
   acc.reset();
   MICROSCOPES_ASSERT(acc.nfeatures() == it->second.second.size());
   for (size_t i = 0; i < acc.nfeatures(); i++, acc.bump()) {
-    if (unlikely(acc.ismasked()))
+    // XXX: see note in state::add_value()
+    if (unlikely(acc.anymasked()))
       continue;
     it->second.second[i]->remove_value(*models_[i], acc, rng);
   }
@@ -169,7 +173,7 @@ state::score_value(row_accessor &acc, rng_t &rng) const
     float sum = fast_log(group.second.first ? float(group.second.first) : empty_group_alpha);
     acc.reset();
     for (size_t i = 0; i < acc.nfeatures(); i++, acc.bump()) {
-      if (unlikely(acc.ismasked()))
+      if (unlikely(acc.anymasked()))
         continue;
       sum += group.second.second[i]->score_value(*models_[i], acc, rng);
     }
@@ -222,7 +226,7 @@ state::sample_post_pred(row_accessor &acc,
   acc.reset();
   mut.reset();
   for (size_t i = 0; !acc.end(); acc.bump(), mut.bump(), i++) {
-    if (!acc.ismasked()) {
+    if (!acc.anymasked()) {
       mut.set(acc);
       continue;
     }

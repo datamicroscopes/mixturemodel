@@ -2,23 +2,6 @@ import numpy as np
 import numpy.ma as ma
 from microscopes.io.schema_pb2 import CRP
 
-def get_np_type(tpe):
-    if tpe == ti.TYPE_INFO_B:
-        return np.bool
-    if tpe == ti.TYPE_INFO_I8:
-        return np.int8
-    if tpe == ti.TYPE_INFO_I16:
-        return np.int16
-    if tpe == ti.TYPE_INFO_I32:
-        return np.int32
-    if tpe == ti.TYPE_INFO_I64:
-        return np.int64
-    if tpe == ti.TYPE_INFO_F32:
-        return np.float32
-    if tpe == ti.TYPE_INFO_F64:
-        return np.float64
-    raise Exception("unknown type: " + tpe)
-
 cdef numpy_dataview get_dataview_for(y):
     """
     creates a dataview for a single recarray
@@ -195,24 +178,13 @@ cdef class state:
         # ensure the state has 1 empty group
         self._thisptr[0].ensure_k_empty_groups(1, False, r._thisptr[0])
 
-        out_ctypes = self._thisptr[0].get_runtime_type_info()
-        out_dtype = []
-        for t in out_ctypes:
-            out_dtype.append(('', get_np_type(t)))
+        cdef vector[runtime_type] out_ctypes = self._thisptr[0].get_runtime_types()
+        out_dtype = [('', get_np_type(t)) for t in out_ctypes]
 
         # build an appropriate numpy array to store the output
         cdef np.ndarray out_npd = np.zeros(1, dtype=out_dtype)
 
-        # construct the output offsets
-        cdef pair[vector[size_t], size_t] out_ret
-        out_ret = GetOffsetsAndSize(out_ctypes)
-        cdef vector[size_t] *out_offsets = &out_ret.first
-
-        cdef row_mutator mut = row_mutator(
-            <uint8_t *> out_npd.data,
-            &out_ctypes,
-            out_offsets)
-
+        cdef row_mutator mut = row_mutator(<uint8_t *> out_npd.data, &out_ctypes)
         gid = self._thisptr[0].sample_post_pred(acc, mut, r._thisptr[0])
 
         return gid, out_npd

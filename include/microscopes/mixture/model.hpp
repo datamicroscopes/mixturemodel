@@ -154,8 +154,8 @@ public:
   void ensure_k_empty_groups(size_t k, bool resample, common::rng_t &rng);
 
   // XXX: also doesn't belong here
-  std::vector< runtime_type_info >
-  get_runtime_type_info() const;
+  std::vector< common::runtime_type >
+  get_runtime_types() const;
 
   // XXX: we assume the caller has taken care to set the groups correctly!
   size_t sample_post_pred(common::row_accessor &acc, common::row_mutator &mut, common::rng_t &rng) const;
