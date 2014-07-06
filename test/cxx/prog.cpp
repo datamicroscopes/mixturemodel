@@ -54,12 +54,9 @@ main(int argc, char **argv)
   for (size_t i = 0; i < D; i++)
     data[i] = bernoulli_distribution(0.5)(r);
 
-  vector<runtime_type_info> types(D, TYPE_INFO_B);
-  vector<size_t> offsets;
-  for (size_t i = 0; i < D; i++)
-    offsets.push_back(i);
+  vector<runtime_type> types(D, runtime_type(TYPE_B));
 
-  row_accessor acc( reinterpret_cast<const uint8_t *>(&data[0]), nullptr, &types, &offsets );
+  row_accessor acc( reinterpret_cast<const uint8_t *>(&data[0]), nullptr, &types);
 
   s.add_value(G/2, 10, acc, r);
 
