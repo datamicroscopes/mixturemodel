@@ -6,10 +6,10 @@ from libcpp cimport bool as cbool
 from libc.stddef cimport size_t
 
 from microscopes._shared_ptr_h cimport shared_ptr
-from microscopes.cxx.common._dataview_h cimport row_accessor, row_mutator
+from microscopes.cxx.common.recarray._dataview_h cimport row_accessor, row_mutator
 from microscopes.cxx.common._random_fwd_h cimport rng_t
 from microscopes.cxx.common._typedefs_h cimport hyperparam_bag_t, suffstats_bag_t
-from microscopes.cxx.common._type_helper_h cimport runtime_type
+from microscopes.cxx.common._runtime_type_h cimport runtime_type
 from microscopes.cxx._models_h cimport model as component_model
 
 cdef extern from "microscopes/mixture/model.hpp" namespace "microscopes::mixture":

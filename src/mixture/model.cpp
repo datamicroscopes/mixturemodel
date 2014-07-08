@@ -9,6 +9,7 @@
 using namespace std;
 using namespace distributions;
 using namespace microscopes::common;
+using namespace microscopes::common::recarray;
 using namespace microscopes::models;
 using namespace microscopes::mixture;
 
@@ -103,7 +104,7 @@ state::add_value(size_t gid, const dataview &view, rng_t &rng)
 }
 
 void
-state::add_value(size_t gid, size_t eid, common::row_accessor &acc, common::rng_t &rng)
+state::add_value(size_t gid, size_t eid, row_accessor &acc, rng_t &rng)
 {
   MICROSCOPES_ASSERT(assignments_.at(eid) == -1);
   auto it = groups_.find(gid);
@@ -123,13 +124,13 @@ state::add_value(size_t gid, size_t eid, common::row_accessor &acc, common::rng_
     // masked
     if (unlikely(acc.anymasked()))
       continue;
-    it->second.second[i]->add_value(*models_[i], acc, rng);
+    it->second.second[i]->add_value(*models_[i], acc.get(), rng);
   }
   assignments_[eid] = gid;
 }
 
 size_t
-state::remove_value(const common::dataview &view, rng_t &rng)
+state::remove_value(const dataview &view, rng_t &rng)
 {
   MICROSCOPES_ASSERT(view.size() == assignments_.size());
   row_accessor acc = view.get();
@@ -138,7 +139,7 @@ state::remove_value(const common::dataview &view, rng_t &rng)
 }
 
 size_t
-state::remove_value(size_t eid, common::row_accessor &acc, common::rng_t &rng)
+state::remove_value(size_t eid, row_accessor &acc, rng_t &rng)
 {
   MICROSCOPES_ASSERT(assignments_.at(eid) != -1);
   const size_t gid = assignments_[eid];
@@ -153,7 +154,7 @@ state::remove_value(size_t eid, common::row_accessor &acc, common::rng_t &rng)
     // XXX: see note in state::add_value()
     if (unlikely(acc.anymasked()))
       continue;
-    it->second.second[i]->remove_value(*models_[i], acc, rng);
+    it->second.second[i]->remove_value(*models_[i], acc.get(), rng);
   }
   assignments_[eid] = -1;
   return gid;
@@ -175,7 +176,7 @@ state::score_value(row_accessor &acc, rng_t &rng) const
     for (size_t i = 0; i < acc.nfeatures(); i++, acc.bump()) {
       if (unlikely(acc.anymasked()))
         continue;
-      sum += group.second.second[i]->score_value(*models_[i], acc, rng);
+      sum += group.second.second[i]->score_value(*models_[i], acc.get(), rng);
     }
     ret.first.push_back(group.first);
     ret.second.push_back(sum);
@@ -230,7 +231,8 @@ state::sample_post_pred(row_accessor &acc,
       mut.set(acc);
       continue;
     }
-    gdata[i]->sample_value(*models_[i], mut, rng);
+    auto value_mut = mut.set();
+    gdata[i]->sample_value(*models_[i], value_mut, rng);
   }
 
   return choice;

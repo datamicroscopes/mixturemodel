@@ -1,7 +1,7 @@
 from libcpp cimport bool as cbool
 from libcpp.vector cimport vector
 from libcpp.utility cimport pair
-from libc.stdint cimport uint8_t 
+from libc.stdint cimport uint8_t
 from libc.stddef cimport size_t
 
 from microscopes._shared_ptr_h cimport shared_ptr
@@ -9,11 +9,11 @@ from microscopes.cxx._models cimport factory
 from microscopes.cxx._models_h cimport model as component_model
 from microscopes.cxx.common._typedefs_h cimport hyperparam_bag_t, suffstats_bag_t
 from microscopes.cxx.common._dataview cimport get_c_types, get_np_type
-from microscopes.cxx.common._dataview_h cimport row_accessor, row_mutator, row_major_dataview
-from microscopes.cxx.common._type_helper_h cimport runtime_type
+from microscopes.cxx.common.recarray._dataview cimport numpy_dataview
+from microscopes.cxx.common.recarray._dataview_h cimport row_accessor, row_mutator, row_major_dataview
+from microscopes.cxx.common._runtime_type_h cimport runtime_type
 from microscopes.cxx.common._rng cimport rng
 from microscopes.cxx.mixture._model_h cimport state as c_state
-from microscopes.cxx.common._dataview cimport numpy_dataview
 
 cimport numpy as np
 

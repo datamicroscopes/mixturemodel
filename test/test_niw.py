@@ -5,12 +5,12 @@
 
 from microscopes.py.models import niw as py_niw
 from microscopes.py.mixture.dp import state as py_state
-from microscopes.py.common.dataview import numpy_dataview as py_numpy_dataview
+from microscopes.py.common.recarray.dataview import numpy_dataview as py_numpy_dataview
 from microscopes.py.common.util import random_orthonormal_matrix
 
 from microscopes.cxx.models import niw as cxx_niw
 from microscopes.cxx.mixture.model import state as cxx_state
-from microscopes.cxx.common.dataview import numpy_dataview as cxx_numpy_dataview
+from microscopes.cxx.common.recarray.dataview import numpy_dataview as cxx_numpy_dataview
 from microscopes.cxx.common.rng import rng
 
 import numpy as np

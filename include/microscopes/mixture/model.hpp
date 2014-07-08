@@ -1,6 +1,7 @@
 #pragma once
 
 #include <microscopes/models/base.hpp>
+#include <microscopes/common/recarray/dataview.hpp>
 #include <microscopes/common/typedefs.hpp>
 #include <microscopes/common/assert.hpp>
 #include <microscopes/io/schema.pb.h>
@@ -133,14 +134,14 @@ public:
   size_t create_group(common::rng_t &rng);
   void delete_group(size_t gid);
 
-  void add_value(size_t gid, const common::dataview &view, common::rng_t &rng);
-  void add_value(size_t gid, size_t eid, common::row_accessor &acc, common::rng_t &rng);
+  void add_value(size_t gid, const common::recarray::dataview &view, common::rng_t &rng);
+  void add_value(size_t gid, size_t eid, common::recarray::row_accessor &acc, common::rng_t &rng);
 
-  size_t remove_value(const common::dataview &view, common::rng_t &rng);
-  size_t remove_value(size_t eid, common::row_accessor &acc, common::rng_t &rng);
+  size_t remove_value(const common::recarray::dataview &view, common::rng_t &rng);
+  size_t remove_value(size_t eid, common::recarray::row_accessor &acc, common::rng_t &rng);
 
   std::pair<std::vector<size_t>, std::vector<float>>
-  score_value(common::row_accessor &acc, common::rng_t &rng) const;
+  score_value(common::recarray::row_accessor &acc, common::rng_t &rng) const;
 
   // accumulate (sum) score_data over the suff-stats of the cartesian-product
   // of [features] x [groups]
@@ -158,7 +159,7 @@ public:
   get_runtime_types() const;
 
   // XXX: we assume the caller has taken care to set the groups correctly!
-  size_t sample_post_pred(common::row_accessor &acc, common::row_mutator &mut, common::rng_t &rng) const;
+  size_t sample_post_pred(common::recarray::row_accessor &acc, common::recarray::row_mutator &mut, common::rng_t &rng) const;
 
   float score_assignment() const;
 
