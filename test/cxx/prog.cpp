@@ -1,5 +1,5 @@
 #include <microscopes/mixture/model.hpp>
-#include <microscopes/common/dataview.hpp>
+#include <microscopes/common/recarray/dataview.hpp>
 #include <microscopes/models/distributions.hpp>
 #include <microscopes/common/random_fwd.hpp>
 
@@ -9,6 +9,7 @@
 using namespace std;
 using namespace distributions;
 using namespace microscopes::common;
+using namespace microscopes::common::recarray;
 using namespace microscopes::models;
 using namespace microscopes::mixture;
 
