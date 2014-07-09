@@ -27,6 +27,13 @@ endif
 SRCFILES := $(wildcard src/mixture/*.cpp) 
 OBJFILES := $(patsubst src/%.cpp, $(O)/%.o, $(SRCFILES))
 
+TESTPROG_SRCFILES := $(wildcard test/cxx/*.cpp)
+TESTPROG_BINFILES := $(patsubst %.cpp, %.prog, $(TESTPROG_SRCFILES))
+
+TESTPROG_LDFLAGS := $(LDFLAGS)
+TESTPROG_LDFLAGS += -L$(TOP)/out -Wl,-rpath,$(TOP)/out
+TESTPROG_LDFLAGS += -lmicroscopes_mixturemodel
+
 UNAME_S := $(shell uname -s)
 TARGETS :=
 LIBPATH_VARNAME :=
@@ -34,24 +41,29 @@ ifeq ($(UNAME_S),Linux)
 	TARGETS := $(O)/libmicroscopes_mixturemodel.so
 	LIBPATH_VARNAME := LD_LIBRARY_PATH
 	EXTNAME := so
+	SHARED_FLAG := -shared
 endif
 ifeq ($(UNAME_S),Darwin)
 	TARGETS := $(O)/libmicroscopes_mixturemodel.dylib
 	LIBPATH_VARNAME := DYLD_LIBRARY_PATH
 	EXTNAME := dylib
+	SHARED_FLAG := -dynamiclib
 endif
 
 all: $(TARGETS)
+
+.PHONY: build_test_cxx
+build_test_cxx: $(TESTPROG_BINFILES)
 
 $(O)/%.o: src/%.cpp
 	@mkdir -p $(@D)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-$(O)/libmicroscopes_mixturemodel.so: $(OBJFILES)
-	gcc -shared -o $(O)/libmicroscopes_mixturemodel.so $(OBJFILES) $(LDFLAGS)
+$(O)/libmicroscopes_mixturemodel.$(EXTNAME): $(OBJFILES)
+	gcc $(SHARED_FLAG) -o $@ $(OBJFILES) $(LDFLAGS)
 
-$(O)/libmicroscopes_mixturemodel.dylib: $(OBJFILES)
-	g++ -dynamiclib -o $(O)/libmicroscopes_mixturemodel.dylib $(OBJFILES) $(LDFLAGS)
+%.prog: %.cpp $(O)/libmicroscopes_mixturemodel.$(EXTNAME)
+	$(CXX) $(CXXFLAGS) $< -o $@ $(TESTPROG_LDFLAGS)
 
 DEPFILES := $(wildcard out/mixture/*.d)
 ifneq ($(DEPFILES),)
@@ -61,22 +73,13 @@ endif
 .PHONY: clean
 clean: 
 	rm -rf out test/cxx/*.{d,prog}
-	find microscopes \( -name '*.cpp' -or -name '*.so' -or -name '*.pyc' \) -type f -print0 | xargs -0 rm --
+	find microscopes \( -name '*.cpp' -or -name '*.so' -or -name '*.pyc' \) -type f -print0 | xargs -0 rm -f --
 
 .PHONY: test
-test:
+test: test_cxx
+	python setup.py build_ext --inplace
 	$(LIBPATH_VARNAME)=$$$(LIBPATH_VARNAME):../common/out:./out PYTHONPATH=$$PYTHONPATH:../common:. nosetests
 
-# test progs
-PROGS := $(wildcard test/cxx/*.cpp)
-OUTFILES := $(patsubst %.cpp, %.prog, $(PROGS))
-
-PROG_LDFLAGS := $(LDFLAGS)
-PROG_LDFLAGS += -L$(TOP)/out -Wl,-rpath,$(TOP)/out
-PROG_LDFLAGS += -lmicroscopes_mixturemodel
-
-%.prog: %.cpp $(O)/libmicroscopes_mixturemodel.$(EXTNAME)
-	$(CXX) $(CXXFLAGS) $< -o $@ $(PROG_LDFLAGS)
-
 .PHONY: test_cxx
-test_cxx: $(OUTFILES)
+test_cxx: build_test_cxx
+	test/cxx/test_state.prog
