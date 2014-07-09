@@ -60,7 +60,7 @@ $(O)/%.o: src/%.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 $(O)/libmicroscopes_mixturemodel.$(EXTNAME): $(OBJFILES)
-	gcc $(SHARED_FLAG) -o $@ $(OBJFILES) $(LDFLAGS)
+	$(CXX) $(SHARED_FLAG) -o $@ $(OBJFILES) $(LDFLAGS)
 
 %.prog: %.cpp $(O)/libmicroscopes_mixturemodel.$(EXTNAME)
 	$(CXX) $(CXXFLAGS) $< -o $@ $(TESTPROG_LDFLAGS)
@@ -72,7 +72,7 @@ endif
 
 .PHONY: clean
 clean: 
-	rm -rf out test/cxx/*.{d,prog}
+	rm -rf out test/cxx/*.{d,dSYM,prog}
 	find microscopes \( -name '*.cpp' -or -name '*.so' -or -name '*.pyc' \) -type f -print0 | xargs -0 rm -f --
 
 .PHONY: test

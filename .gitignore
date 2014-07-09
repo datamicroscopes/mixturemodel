@@ -1,10 +1,11 @@
 *.swp
 *.pyc
-*.d
-*.prog
 .DS_Store
 /config.mk
 /microscopes/**/*.so
 /microscopes/**/*.cpp
 /build
 /out
+*.d
+*.prog
+*.dSYM
