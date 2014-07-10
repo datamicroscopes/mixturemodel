@@ -200,6 +200,6 @@ cdef class state:
 def bind(state s, abstract_dataview data):
     cdef shared_ptr[c_entity_based_state_object] px
     px.reset(new c_bound_state(s._thisptr, data._thisptr))
-    cdef entity_based_state_object ret = entity_based_state_object() 
+    cdef entity_based_state_object ret = entity_based_state_object(s._models) 
     ret.set_entity(px)
     return ret

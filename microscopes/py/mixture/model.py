@@ -312,7 +312,7 @@ class bound_state(object):
         return self._impl.get_feature_hp(i)
 
     def set_component_hp(self, i, raw):
-        self._impl.set_feature_hp(raw)
+        self._impl.set_feature_hp(i, raw)
 
     def suffstats_identifiers(self, i):
         return self._impl.groups()
