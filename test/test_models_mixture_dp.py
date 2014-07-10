@@ -1,5 +1,5 @@
 from distributions.dbg.models import bb as py_bb
-from microscopes.py.mixture.dp import state as py_state, fill as py_fill, sample as py_sample
+from microscopes.py.mixture.model import state as py_state, fill as py_fill, sample as py_sample
 from microscopes.cxx.models import bb as cxx_bb
 from microscopes.cxx.common.rng import rng
 from microscopes.cxx.mixture.model import state as cxx_state

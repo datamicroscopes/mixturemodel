@@ -5,7 +5,7 @@ from distributions.util import scores_to_probs
 from distributions.dbg.models import bb as py_bb
 from distributions.dbg.models import bnb as py_bnb
 from distributions.dbg.models import nich as py_nich
-from microscopes.py.mixture.dp import state as py_state
+from microscopes.py.mixture.model import state as py_state
 
 from microscopes.cxx.models import bb as cxx_bb
 from microscopes.cxx.models import bnb as cxx_bnb

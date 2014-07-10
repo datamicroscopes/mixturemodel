@@ -4,7 +4,7 @@
 # XXX: fix this!
 
 from microscopes.py.models import niw as py_niw
-from microscopes.py.mixture.dp import state as py_state
+from microscopes.py.mixture.model import state as py_state
 from microscopes.py.common.recarray.dataview import numpy_dataview as py_numpy_dataview
 from microscopes.py.common.util import random_orthonormal_matrix
 

@@ -278,3 +278,68 @@ class state(object):
     def dcheck_consistency(self):
         # XXX: TODO
         pass
+
+class bound_state(object):
+    def __init__(self, impl, data):
+        self._impl = impl
+        self._data = data
+
+    def nentities(self):
+        return self._impl.nentities()
+
+    def ngroups(self):
+        return self._impl.ngroups()
+
+    def empty_groups(self):
+        return self._impl.empty_groups()
+
+    def groupsize(self, gid):
+        return self._impl.groupsize(gid)
+
+    def get_cluster_hp(self):
+        return self._impl.get_cluster_hp()
+
+    def set_cluster_hp(self, raw):
+        self._impl.set_cluster_hp(raw)
+
+    def get_component_hp(self, i):
+        return self._impl.get_feature_hp(i)
+
+    def set_component_hp(self, i, raw):
+        self._impl.set_feature_hp(raw)
+
+    def suffstats_identifiers(self, i):
+        return self._impl.groups()
+
+    def get_suffstats(self, fi, gi):
+        return self._impl.get_suffstats(gi, fi)
+
+    def set_suffstats(self, fi, gi, raw):
+        self._impl.set_suffstats(gi, fi, raw)
+
+    def add_value(self, gid, eid, rng=None):
+        self._impl.add_value(gid, eid, self._data.get(eid), rng)
+
+    def remove_value(self, eid, rng=None):
+        return self._impl.remove_value(eid, self._data.get(eid), rng)
+
+    def score_value(self, eid, rng=None):
+        return self._impl.score_value(self._data.get(eid), rng)
+
+    def score_assignment(self):
+        return self._impl.score_assignment()
+
+    def score_likelihood_indiv(self, fi, gi, rng=None):
+        return self._impl.score_data([fi], [gi], rng)
+
+    def score_likelihood(self, fi, rng=None):
+        return self._impl.score_data([fi], None, rng)
+
+    def create_group(self, rng=None):
+        return self._impl.create_group(rng)
+
+    def delete_group(self, gid):
+        self._impl.delete_group(gid)
+
+def bind(state, data):
+    return bound_state(state, data)
