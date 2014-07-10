@@ -290,6 +290,12 @@ class bound_state(object):
     def ngroups(self):
         return self._impl.ngroups()
 
+    def ncomponents(self):
+        return self._impl.nfeatures()
+
+    def assignments(self):
+        return self._impl.assignments()
+
     def empty_groups(self):
         return self._impl.empty_groups()
 
