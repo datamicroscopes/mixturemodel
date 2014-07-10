@@ -101,10 +101,10 @@ class state(object):
     def get_feature_hp_shared(self, fi):
         return self._featureshares[fi]
 
-    def get_suff_stats(self, gid, fid):
+    def get_suffstats(self, gid, fid):
         return self._groups.group_data(gid)[fid].dump()
 
-    def set_suff_stats(self, gid, fid, raw):
+    def set_suffstats(self, gid, fid, raw):
         self._groups.group_data(gid)[fid].load(raw)
 
     def assignments(self):

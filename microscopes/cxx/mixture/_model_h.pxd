@@ -6,22 +6,23 @@ from libcpp cimport bool as cbool
 from libc.stddef cimport size_t
 
 from microscopes._shared_ptr_h cimport shared_ptr
-from microscopes.cxx.common.recarray._dataview_h cimport row_accessor, row_mutator
+from microscopes.cxx.common.recarray._dataview_h cimport row_accessor, row_mutator, dataview
 from microscopes.cxx.common._random_fwd_h cimport rng_t
 from microscopes.cxx.common._typedefs_h cimport hyperparam_bag_t, suffstats_bag_t
 from microscopes.cxx.common._runtime_type_h cimport runtime_type
+from microscopes.cxx.common._entity_state_h cimport entity_based_state_object
 from microscopes.cxx._models_h cimport model as component_model
 
 cdef extern from "microscopes/mixture/model.hpp" namespace "microscopes::mixture":
     cdef cppclass state:
-        state(size_t, vector[shared_ptr[component_model]] &) except +
+        state(size_t, const vector[shared_ptr[component_model]] &) except +
 
-        hyperparam_bag_t get_hp() except +
-        void set_hp(hyperparam_bag_t &) except +
+        hyperparam_bag_t get_cluster_hp() except +
+        void set_cluster_hp(const hyperparam_bag_t &) except +
         hyperparam_bag_t get_feature_hp(size_t) except +
-        void set_feature_hp(size_t, hyperparam_bag_t &) except +
-        suffstats_bag_t get_suff_stats(size_t, size_t) except +
-        void set_suff_stats(size_t, size_t, suffstats_bag_t &) except +
+        void set_feature_hp(size_t, const hyperparam_bag_t &) except +
+        suffstats_bag_t get_suffstats(size_t, size_t) except +
+        void set_suffstats(size_t, size_t, const suffstats_bag_t &) except +
 
         vector[ssize_t] & assignments()
         set[size_t] & empty_groups()
@@ -48,3 +49,7 @@ cdef extern from "microscopes/mixture/model.hpp" namespace "microscopes::mixture
 
         # for debugging purposes
         void dcheck_consistency() except +
+
+    cdef cppclass bound_state(entity_based_state_object):
+        bound_state(const shared_ptr[state] &,
+                    const shared_ptr[dataview] &) except +

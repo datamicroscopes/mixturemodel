@@ -33,8 +33,8 @@ def assert_1darray_almst_equals(a, b, places=5):
 
 def assert_suff_stats_equal(py_s, cxx_s, features, groups):
     for fid, gid in it.product(features, groups):
-        py_ss = py_s.get_suff_stats(gid, fid)
-        cxx_ss = cxx_s.get_suff_stats(gid, fid)
+        py_ss = py_s.get_suffstats(gid, fid)
+        cxx_ss = cxx_s.get_suffstats(gid, fid)
         assert_dict_almost_equals(py_ss, cxx_ss)
 
 def test_operations():

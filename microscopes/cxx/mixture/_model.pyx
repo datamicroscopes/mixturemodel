@@ -49,95 +49,93 @@ cdef class state:
         cdef vector[shared_ptr[component_model]] cmodels
         for py_m, c_m in models:
             cmodels.push_back((<factory>c_m).new_cmodel())
-        self._thisptr = new c_state(n, cmodels)
-
-    def __dealloc__(self):
-        del self._thisptr
+        self._thisptr.reset(new c_state(n, cmodels))
 
     def get_feature_types(self):
         return [x.get_py_type() for x, _ in self._models]
 
     def get_feature_dtypes(self):
+        # XXX: this is broken since feature types can be multi-dimensional
         return [('', tpe.Value) for tpe in self.get_feature_types()]
 
     def get_cluster_hp(self):
         m = CRP()
-        raw = str(self._thisptr[0].get_hp())
+        raw = str(self._thisptr.get().get_cluster_hp())
         m.ParseFromString(raw)
         return {'alpha':m.alpha}
 
     def set_cluster_hp(self, raw):
         m = CRP()
         m.alpha = float(raw['alpha'])
-        self._thisptr[0].set_hp(m.SerializeToString())
+        self._thisptr.get().set_cluster_hp(m.SerializeToString())
 
     def get_feature_hp(self, int i):
-        raw = str(self._thisptr[0].get_feature_hp(i))
+        raw = str(self._thisptr.get().get_feature_hp(i))
         return self._models[i][0].shared_bytes_to_dict(raw)
 
     def set_feature_hp(self, int i, dict d):
         cdef hyperparam_bag_t raw = self._models[i][0].shared_dict_to_bytes(d)
-        self._thisptr[0].set_feature_hp(i, raw)
+        self._thisptr.get().set_feature_hp(i, raw)
 
-    def get_suff_stats(self, int gid, int fid):
-        raw = str(self._thisptr[0].get_suff_stats(gid, fid))
+    def get_suffstats(self, int gid, int fid):
+        raw = str(self._thisptr.get().get_suffstats(gid, fid))
         return self._models[fid][0].group_bytes_to_dict(raw)
 
-    def set_suff_stats(self, int gid, int fid, dict d):
+    def set_suffstats(self, int gid, int fid, dict d):
         cdef suffstats_bag_t raw = self._models[fid][0].shared_dict_to_bytes(d)
-        self._thisptr[0].set_suff_stats(gid, fid, raw)
+        self._thisptr.get().set_suffstats(gid, fid, raw)
 
     def assignments(self):
-        cdef list ass = self._thisptr[0].assignments()
+        cdef list ass = self._thisptr.get().assignments()
         return ass
 
     def empty_groups(self):
-        cdef list egroups = list(self._thisptr[0].empty_groups())
+        cdef list egroups = list(self._thisptr.get().empty_groups())
         return egroups
 
     def ngroups(self):
-        return self._thisptr[0].ngroups()
+        return self._thisptr.get().ngroups()
 
     def nentities(self):
-        return self._thisptr[0].nentities()
+        return self._thisptr.get().nentities()
 
     def nfeatures(self):
         return len(self._models)
 
     def groupsize(self, int gid):
-        return self._thisptr[0].groupsize(gid)
+        return self._thisptr.get().groupsize(gid)
 
     def is_group_empty(self, int gid):
         return not self._groups.nentities_in_group(gid)
 
     def groups(self):
-        cdef list g = self._thisptr[0].groups()
+        cdef list g = self._thisptr.get().groups()
         return g
 
     def create_group(self, rng r):
         assert r
-        return self._thisptr[0].create_group(r._thisptr[0])
+        return self._thisptr.get().create_group(r._thisptr[0])
 
     def delete_group(self, int gid):
-        self._thisptr[0].delete_group(gid)
+        self._thisptr.get().delete_group(gid)
 
     def add_value(self, int gid, int eid, y, rng r):
         assert r
         cdef numpy_dataview view = get_dataview_for(y)
-        cdef row_accessor acc = view._thisptr[0].get()
-        self._thisptr[0].add_value(gid, eid, acc, r._thisptr[0])
+        cdef row_accessor acc = view._thisptr.get().get()
+        self._thisptr.get().add_value(gid, eid, acc, r._thisptr[0])
 
     def remove_value(self, int eid, y, rng r):
         assert r
         cdef numpy_dataview view = get_dataview_for(y)
-        cdef row_accessor acc = view._thisptr[0].get()
-        return self._thisptr[0].remove_value(eid, acc, r._thisptr[0])
+        cdef row_accessor acc = view._thisptr.get().get()
+        return self._thisptr.get().remove_value(eid, acc, r._thisptr[0])
 
     def score_value(self, y, rng r):
         assert r
         cdef numpy_dataview view = get_dataview_for(y)
-        cdef row_accessor acc = view._thisptr[0].get()
-        cdef pair[vector[size_t], vector[float]] ret = self._thisptr[0].score_value(acc, r._thisptr[0])
+        cdef row_accessor acc = view._thisptr.get().get()
+        cdef pair[vector[size_t], vector[float]] ret = self._thisptr.get().score_value(acc, r._thisptr[0])
         ret0 = list(ret.first)
         ret1 = np.array(list(ret.second))
         return ret0, ret1
@@ -162,7 +160,7 @@ cdef class state:
         for i in groups:
             g.push_back(i)
 
-        return self._thisptr[0].score_data(f, g, r._thisptr[0])
+        return self._thisptr.get().score_data(f, g, r._thisptr[0])
 
     def sample_post_pred(self, y_new, rng r):
         assert r
@@ -173,28 +171,35 @@ cdef class state:
                 mask=[tuple(True for _ in xrange(D))])
 
         cdef numpy_dataview view = get_dataview_for(y_new)
-        cdef row_accessor acc = view._thisptr[0].get()
+        cdef row_accessor acc = view._thisptr.get().get()
 
         # ensure the state has 1 empty group
-        self._thisptr[0].ensure_k_empty_groups(1, False, r._thisptr[0])
+        self._thisptr.get().ensure_k_empty_groups(1, False, r._thisptr[0])
 
-        cdef vector[runtime_type] out_ctypes = self._thisptr[0].get_runtime_types()
+        cdef vector[runtime_type] out_ctypes = self._thisptr.get().get_runtime_types()
         out_dtype = [('', get_np_type(t)) for t in out_ctypes]
 
         # build an appropriate numpy array to store the output
         cdef np.ndarray out_npd = np.zeros(1, dtype=out_dtype)
 
         cdef row_mutator mut = row_mutator(<uint8_t *> out_npd.data, &out_ctypes)
-        gid = self._thisptr[0].sample_post_pred(acc, mut, r._thisptr[0])
+        gid = self._thisptr.get().sample_post_pred(acc, mut, r._thisptr[0])
 
         return gid, out_npd
 
     def score_assignment(self):
-        return self._thisptr[0].score_assignment()
+        return self._thisptr.get().score_assignment()
 
     def score_joint(self, rng r):
         assert r
-        return self._thisptr[0].score_joint(r._thisptr[0])
+        return self._thisptr.get().score_joint(r._thisptr[0])
 
     def dcheck_consistency(self):
-        self._thisptr[0].dcheck_consistency()
+        self._thisptr.get().dcheck_consistency()
+
+def bind(state s, abstract_dataview data):
+    cdef shared_ptr[c_entity_based_state_object] px
+    px.reset(new c_bound_state(s._thisptr, data._thisptr))
+    cdef entity_based_state_object ret = entity_based_state_object() 
+    ret.set_entity(px)
+    return ret

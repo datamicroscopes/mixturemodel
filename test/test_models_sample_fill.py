@@ -39,8 +39,8 @@ def _test_sample_fill(a_ctor, a_bbmodel, b_ctor, b_bbmodel, R):
         assert set(a_s.groups()) == set(b_s.groups())
 
         for fid, gid in it.product([0], a_s.groups()):
-            a_ss = a_s.get_suff_stats(gid, fid)
-            b_ss = b_s.get_suff_stats(gid, fid)
+            a_ss = a_s.get_suffstats(gid, fid)
+            b_ss = b_s.get_suffstats(gid, fid)
             assert_dict_almost_equals(a_ss, b_ss)
 
     a_s, b_s = create()
