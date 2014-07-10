@@ -35,7 +35,7 @@ main(void)
   state s(1000, models);
   state::message_type m_hp;
   m_hp.set_alpha(2.0);
-  s.set_hp(protobuf_to_string(m_hp));
+  s.set_cluster_hp(protobuf_to_string(m_hp));
 
   distributions_model<BetaBernoulli>::message_type m_feature_hp;
   m_feature_hp.set_alpha(1.0);

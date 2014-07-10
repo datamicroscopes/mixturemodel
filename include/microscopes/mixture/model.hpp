@@ -280,6 +280,9 @@ public:
     return impl_->score_data({component}, {}, rng);
   }
 
+  size_t create_group(common::rng_t &rng) override { return impl_->create_group(rng); }
+  void delete_group(size_t gid) override { impl_->delete_group(gid); }
+
 private:
   std::shared_ptr<state> impl_;
   std::shared_ptr<common::recarray::dataview> data_;
