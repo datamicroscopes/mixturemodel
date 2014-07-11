@@ -86,12 +86,10 @@ cdef class state:
         self._thisptr.get().set_suffstats(gid, fid, raw)
 
     def assignments(self):
-        cdef list ass = self._thisptr.get().assignments()
-        return ass
+        return list(self._thisptr.get().assignments())
 
     def empty_groups(self):
-        cdef list egroups = list(self._thisptr.get().empty_groups())
-        return egroups
+        return list(self._thisptr.get().empty_groups())
 
     def ngroups(self):
         return self._thisptr.get().ngroups()

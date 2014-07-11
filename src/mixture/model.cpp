@@ -242,12 +242,12 @@ float
 state::score_assignment() const
 {
   map<size_t, size_t> counts;
-  MICROSCOPES_ASSERT(assignments_[0] != -1);
+  MICROSCOPES_DCHECK(assignments_[0] != -1, "assignment is not valid");
   counts[assignments_[0]] = 1;
   float sum = 0.;
   for (size_t i = 1; i < assignments_.size(); i++) {
     const ssize_t gid = assignments_[i];
-    MICROSCOPES_ASSERT(gid != -1);
+    MICROSCOPES_DCHECK(gid != -1, "assignment is not valid");
     const auto it = counts.find(gid);
     const bool found = (it != counts.end());
     const float numer = (!found) ? alpha_ : it->second;

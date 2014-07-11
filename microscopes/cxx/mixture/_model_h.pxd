@@ -24,8 +24,8 @@ cdef extern from "microscopes/mixture/model.hpp" namespace "microscopes::mixture
         suffstats_bag_t get_suffstats(size_t, size_t) except +
         void set_suffstats(size_t, size_t, const suffstats_bag_t &) except +
 
-        vector[ssize_t] & assignments()
-        set[size_t] & empty_groups()
+        const vector[ssize_t] & assignments()
+        const set[size_t] & empty_groups()
 
         size_t nentities()
         size_t ngroups()
@@ -35,15 +35,15 @@ cdef extern from "microscopes/mixture/model.hpp" namespace "microscopes::mixture
         size_t create_group(rng_t &) except +
         void delete_group(size_t) except +
 
-        void add_value(size_t, size_t, row_accessor &, rng_t &) except +
-        size_t remove_value(size_t, row_accessor &, rng_t &) except +
-        pair[vector[size_t], vector[float]] score_value(row_accessor &, rng_t &) except +
-        float score_data(vector[size_t] &, vector[size_t] &, rng_t &) except +
+        void add_value(size_t, size_t, const row_accessor &, rng_t &) except +
+        size_t remove_value(size_t, const row_accessor &, rng_t &) except +
+        pair[vector[size_t], vector[float]] score_value(const row_accessor &, rng_t &) except +
+        float score_data(const vector[size_t] &, const vector[size_t] &, rng_t &) except +
 
         void ensure_k_empty_groups(size_t, cbool, rng_t &) except +
         vector[runtime_type] get_runtime_types() except +
 
-        size_t sample_post_pred(row_accessor &, row_mutator &, rng_t &) except +
+        size_t sample_post_pred(const row_accessor &, row_mutator &, rng_t &) except +
         float score_assignment() except +
         float score_joint(rng_t &) except +
 
