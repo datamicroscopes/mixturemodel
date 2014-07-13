@@ -88,9 +88,12 @@ test: build_py test_cxx
 test_cxx: build_test_cxx
 	test/cxx/test_state.prog
 
+READ_ONLY_USERNAME=datamicroscopes-travis-builder
+READ_ONLY_PASSWORD=458fa9be7190e08dd0aa328fbd95d8756e15cded8d2a56e1634f606702337b3db1cd6eb6dee4cdfa0da41a270aa92befba19
+
 .PHONY: travis_before_install
 travis_before_install:
-	git clone git@github.com:datamicroscopes/common.git .travis/common
+	git clone https://$(READ_ONLY_USERNAME):$(READ_ONLY_PASSWORD)@github.com/datamicroscopes/common.git .travis/common
 	$(MAKE) -C .travis/common travis_before_install
 
 .PHONY: travis_install
