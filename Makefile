@@ -56,6 +56,10 @@ all: $(TARGETS)
 .PHONY: build_test_cxx
 build_test_cxx: $(TESTPROG_BINFILES)
 
+.PHONY: build_py
+build_py: $(O)/libmicroscopes_mixturemodel.$(EXTNAME)
+	python setup.py build_ext --inplace
+
 $(O)/%.o: src/%.cpp
 	@mkdir -p $(@D)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
@@ -77,10 +81,25 @@ clean:
 	find microscopes \( -name '*.cpp' -or -name '*.so' -or -name '*.pyc' \) -type f -print0 | xargs -0 rm -f --
 
 .PHONY: test
-test: test_cxx
-	python setup.py build_ext --inplace
+test: build_py test_cxx
 	$(LIBPATH_VARNAME)=$$$(LIBPATH_VARNAME):$(MICROSCOPES_COMMON_REPO)/out:./out PYTHONPATH=$$PYTHONPATH:$(MICROSCOPES_COMMON_REPO):. nosetests
 
 .PHONY: test_cxx
 test_cxx: build_test_cxx
 	test/cxx/test_state.prog
+
+.PHONY: travis_before_install
+travis_before_install:
+	git clone git@github.com:datamicroscopes/common.git .travis/common
+	$(MAKE) -C .travis/common travis_before_install
+
+.PHONY: travis_install
+travis_install: 
+	$(MAKE) -C .travis/common travis_install
+	pip install -r .travis/requirements.txt
+	cp .travis/config.mk .
+	echo "DISTRIBUTIONS_LIB = $$VIRTUAL_ENV/lib" >> config.mk
+	make build_py build_test_cxx
+
+.PHONY: travis_script
+travis_script: test
