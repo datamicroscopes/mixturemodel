@@ -3,8 +3,7 @@ from microscopes.py.mixture.model import state as py_state, fill as py_fill, sam
 from microscopes.cxx.models import bb as cxx_bb
 from microscopes.cxx.common.rng import rng
 from microscopes.cxx.mixture.model import state as cxx_state
-from microscopes.py.common.util import KL_discrete
-from scipy.misc import logsumexp
+from microscopes.py.common.util import KL_discrete, logsumexp
 
 import numpy as np
 import numpy.ma as ma

@@ -6,3 +6,5 @@ virtualenv:
 before_install: make travis_before_install
 install: make travis_install
 script: make travis_script
+notifications:
+  slack: datamicroscopes:q6CoLLoUiN1eim2l4joVNHzi
