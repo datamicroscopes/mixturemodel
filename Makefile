@@ -1,13 +1,14 @@
 -include config.mk
 
-DEBUG ?= 0
-
 O := out
 TOP := $(shell echo $${PWD-`pwd`})
 
+DEBUG ?= 0
+MICROSCOPES_COMMON_REPO ?= $(TOP)/../common
+
 # set the CXXFLAGS
 CXXFLAGS := -fPIC -g -MD -Wall -std=c++0x -I$(TOP)/include
-CXXFLAGS += -I$(TOP)/../common/include
+CXXFLAGS += -I$(MICROSCOPES_COMMON_REPO)/include
 ifneq ($(strip $(DEBUG)),1)
 	CXXFLAGS += -O3 -DNDEBUG
 else
@@ -19,7 +20,7 @@ endif
 
 # set the LDFLAGS
 LDFLAGS := -lprotobuf -ldistributions_shared -lmicroscopes_common
-LDFLAGS += -L$(TOP)/../common/out -Wl,-rpath,$(TOP)/../common/out
+LDFLAGS += -L$(MICROSCOPES_COMMON_REPO)/out -Wl,-rpath,$(MICROSCOPES_COMMON_REPO)/out
 ifneq ($(strip $(DISTRIBUTIONS_LIB)),)
 	LDFLAGS += -L$(DISTRIBUTIONS_LIB) -Wl,-rpath,$(DISTRIBUTIONS_LIB) 
 endif
@@ -78,7 +79,7 @@ clean:
 .PHONY: test
 test: test_cxx
 	python setup.py build_ext --inplace
-	$(LIBPATH_VARNAME)=$$$(LIBPATH_VARNAME):../common/out:./out PYTHONPATH=$$PYTHONPATH:../common:. nosetests
+	$(LIBPATH_VARNAME)=$$$(LIBPATH_VARNAME):$(MICROSCOPES_COMMON_REPO)/out:./out PYTHONPATH=$$PYTHONPATH:$(MICROSCOPES_COMMON_REPO):. nosetests
 
 .PHONY: test_cxx
 test_cxx: build_test_cxx
