@@ -8,6 +8,7 @@ MICROSCOPES_COMMON_REPO ?= $(TOP)/../common
 
 # set the CXXFLAGS
 CXXFLAGS := -fPIC -g -MD -Wall -std=c++0x -I$(TOP)/include
+CXXFLAGS += -Wno-deprecated-register
 CXXFLAGS += -I$(MICROSCOPES_COMMON_REPO)/include
 ifneq ($(strip $(DEBUG)),1)
 	CXXFLAGS += -O3 -DNDEBUG
@@ -82,7 +83,7 @@ clean:
 
 .PHONY: test
 test: build_py test_cxx
-	$(LIBPATH_VARNAME)=$$$(LIBPATH_VARNAME):$(MICROSCOPES_COMMON_REPO)/out:./out PYTHONPATH=$$PYTHONPATH:$(MICROSCOPES_COMMON_REPO):. nosetests
+	$(LIBPATH_VARNAME)=$$$(LIBPATH_VARNAME):$(MICROSCOPES_COMMON_REPO)/out:./out PYTHONPATH=$$PYTHONPATH:$(MICROSCOPES_COMMON_REPO):. nosetests --verbose
 
 .PHONY: test_cxx
 test_cxx: build_test_cxx
