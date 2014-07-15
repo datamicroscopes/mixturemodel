@@ -13,12 +13,26 @@ from microscopes.cxx.common.recarray._dataview cimport numpy_dataview, abstract_
 from microscopes.cxx.common.recarray._dataview_h cimport row_accessor, row_mutator, row_major_dataview
 from microscopes.cxx.common._runtime_type_h cimport runtime_type
 from microscopes.cxx.common._rng cimport rng
-from microscopes.cxx.common._entity_state_h cimport entity_based_state_object as c_entity_based_state_object
-from microscopes.cxx.common._entity_state import entity_based_state_object
-from microscopes.cxx.common._entity_state cimport entity_based_state_object
-from microscopes.cxx.mixture._model_h cimport state as c_state, bound_state as c_bound_state
+from microscopes.cxx.common._entity_state_h cimport \
+    entity_based_state_object as c_entity_based_state_object, \
+    fixed_entity_based_state_object as c_fixed_entity_based_state_object
+from microscopes.cxx.common._entity_state import \
+    entity_based_state_object, \
+    fixed_entity_based_state_object
+from microscopes.cxx.common._entity_state cimport \
+    entity_based_state_object, \
+    fixed_entity_based_state_object
+from microscopes.cxx.mixture._model_h cimport \
+    state as c_state, \
+    fixed_state as c_fixed_state, \
+    bound_state as c_bound_state, \
+    bound_fixed_state as c_bound_fixed_state
 
 cimport numpy as np
+
+cdef class fixed_state:
+    cdef shared_ptr[c_fixed_state] _thisptr
+    cdef list _models
 
 cdef class state:
     cdef shared_ptr[c_state] _thisptr
