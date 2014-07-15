@@ -542,8 +542,8 @@ public:
         common::entity_based_state_object>(impl, data)
   {}
 
-  std::vector<size_t> override
-  empty_groups() const
+  std::vector<size_t>
+  empty_groups() const override
   {
     const auto &egs = impl_->empty_groups();
     return std::vector<size_t>(egs.begin(), egs.end());
