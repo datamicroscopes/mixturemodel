@@ -85,6 +85,10 @@ clean:
 test: build_py test_cxx
 	$(LIBPATH_VARNAME)=$$$(LIBPATH_VARNAME):$(MICROSCOPES_COMMON_REPO)/out:./out PYTHONPATH=$$PYTHONPATH:$(MICROSCOPES_COMMON_REPO):. nosetests --verbose
 
+.PHONY: fast_test
+fast_test: build_py test_cxx
+	$(LIBPATH_VARNAME)=$$$(LIBPATH_VARNAME):$(MICROSCOPES_COMMON_REPO)/out:./out PYTHONPATH=$$PYTHONPATH:$(MICROSCOPES_COMMON_REPO):. nosetests --verbose -a '!slow'
+
 .PHONY: test_cxx
 test_cxx: build_test_cxx
 	test/cxx/test_state.prog
@@ -106,4 +110,4 @@ travis_install:
 	make build_py build_test_cxx
 
 .PHONY: travis_script
-travis_script: test
+travis_script: fast_test
