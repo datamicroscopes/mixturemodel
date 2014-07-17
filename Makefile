@@ -8,7 +8,7 @@ COMPILER := CC=gcc-4.8 CXX=g++-4.8
 travis_install: 
 	(cd .travis && python install_microscopes_common.py)
 	pip install -r .travis/requirements.txt
-	mkdir build
+	mkdir -p build
 	(cd build && $(COMPILER) cmake -DCMAKE_INSTALL_PREFIX=$$VIRTUAL_ENV .. && make && make install)
 	$(COMPILER) pip install .
 
