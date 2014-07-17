@@ -12,87 +12,94 @@ import numpy
 import sys
 import os
 
+from subprocess import Popen, PIPE
+import json
+
+def find_dependency(soname, incname):
+    def test(prefix):
+        sofile = os.path.join(prefix, 'lib/{}'.format(soname))
+        incdir = os.path.join(prefix, 'include/{}'.format(incname))
+        if os.path.isfile(sofile) and os.path.isdir(incdir):
+            return os.path.join(prefix, 'lib'), \
+                   os.path.join(prefix, 'include')
+        return None
+    if 'VIRTUAL_ENV' in os.environ:
+        ret = test(os.environ['VIRTUAL_ENV'])
+        if ret is not None:
+            return ret[0], ret[1]
+    if 'CONDA_DEFAULT_ENV' in os.environ:
+        # shell out to conda to get info
+        s = Popen(['conda', 'info', '--json'], shell=False, stdout=PIPE).stdout.read()
+        s = json.loads(s)
+        if 'default_prefix' in s:
+            ret = test(str(s['default_prefix']))
+            if ret is not None:
+                return ret[0], ret[1]
+    return None, None
+
+def find_cython_dependency(dirname):
+    def test(prefix):
+        incdir = os.path.join(prefix, 'cython/{}'.format(dirname))
+        if os.path.isdir(incdir):
+            return os.path.join(prefix, 'cython')
+        return None
+    if 'VIRTUAL_ENV' in os.environ:
+        ret = test(os.environ['VIRTUAL_ENV'])
+        if ret is not None:
+            return ret
+    if 'CONDA_DEFAULT_ENV' in os.environ:
+        # shell out to conda to get info
+        s = Popen(['conda', 'info', '--json'], shell=False, stdout=PIPE).stdout.read()
+        s = json.loads(s)
+        if 'default_prefix' in s:
+            ret = test(str(s['default_prefix']))
+            if ret is not None:
+                return ret
+    return None
+
 clang = False
 if sys.platform.lower().startswith('darwin'):
     clang = True
+
+so_ext = 'dylib' if clang else 'so'
 
 min_cython_version = '0.20.2b1' if clang else '0.20.1'
 if LooseVersion(cython_version) < LooseVersion(min_cython_version):
     raise ValueError(
         'cython support requires cython>={}'.format(min_cython_version))
 
-so_ext = 'dylib' if clang else 'so'
+cc = os.environ.get('CC', None)
+cxx = os.environ.get('CXX', None)
+debug_build = False
 
-KEYS = (
-    'DISTRIBUTIONS_INC',
-    'DISTRIBUTIONS_LIB',
-    'CC',
-    'CXX',
-    'DEBUG',
-    'MICROSCOPES_COMMON_REPO',
-    )
-
-def get_config_info(config):
-    config = parse_makefile(config)
-    ret = {}
-    for k in KEYS:
-        if k in config:
-            ret[k] = config[k]
-    return ret
-
-def merge_config(existing, overwriting):
-    existing.update(overwriting)
-
-config = {}
-for fname in ('../config.mk', 'config.mk'):
-    try:
-        merge_config(config, get_config_info(fname))
-    except IOError:
-        pass
-
-distributions_inc = config.get('DISTRIBUTIONS_INC', None)
-distributions_lib = config.get('DISTRIBUTIONS_LIB', None)
-cc = config.get('CC', None)
-cxx = config.get('CXX', None)
-debug_build = config.get('DEBUG', 0) == 1
-microscopes_common_repo = config.get('MICROSCOPES_COMMON_REPO', None)
+distributions_lib, distributions_inc = find_dependency(
+    'libdistributions_shared.{}'.format(so_ext), 'distributions')
+microscopes_common_lib, microscopes_common_inc = find_dependency(
+    'libmicroscopes_common.{}'.format(so_ext), 'microscopes')
+microscopes_common_cython_inc = find_cython_dependency('microscopes')
+microscopes_mixturemodel_lib, microscopes_mixturemodel_inc = find_dependency(
+    'libmicroscopes_mixturemodel.{}'.format(so_ext), 'microscopes')
 
 if distributions_inc is not None:
     print 'Using distributions_inc:', distributions_inc
 if distributions_lib is not None:
     print 'Using distributions_lib:', distributions_lib
+if microscopes_common_inc is not None:
+    print 'Using microscopes_common_inc:', microscopes_common_inc
+if microscopes_common_cython_inc is not None:
+    print 'Using microscopes_common_cython_inc:', microscopes_common_cython_inc
+if microscopes_common_lib is not None:
+    print 'Using microscopes_common_lib:', microscopes_common_lib
+if microscopes_mixturemodel_inc is not None:
+    print 'Using microscopes_mixturemodel_inc:', microscopes_mixturemodel_inc
+if microscopes_mixturemodel_lib is not None:
+    print 'Using microscopes_mixturemodel_lib:', microscopes_mixturemodel_lib
 if cc is not None:
     print 'Using CC={}'.format(cc)
-    os.environ['CC'] = cc
 if cxx is not None:
     print 'Using CXX={}'.format(cxx)
-    os.environ['CXX'] = cxx
 if debug_build:
     print 'Debug build'
-if microscopes_common_repo:
-    print 'Using microscopes_common_repo:', microscopes_common_repo
-else:
-    microscopes_common_repo = '../common' # default path
-
-# check that microscopes_common_repo is a valid dir
-if not os.path.isdir(microscopes_common_repo):
-    raise ValueError('not a valid directory: {}'.format(microscopes_common_repo))
-
-# make sure C shared libraries exists
-shared_libraries = (
-    '{}/out/libmicroscopes_common.{}'.format(microscopes_common_repo, so_ext),
-    'out/libmicroscopes_mixturemodel.{}'.format(so_ext),
-)
-
-for so in shared_libraries:
-    if not os.path.isfile(so):
-        raise ValueError(
-            "could not locate `{}'. make sure to run `make' first".format(so))
-
-# append to library path
-os.environ['LIBRARY_PATH'] = \
-        os.environ.get('LIBRARY_PATH', '') + \
-        ':{}/out:out'.format(microscopes_common_repo)
 
 extra_compile_args = [
     '-std=c++0x',
@@ -107,31 +114,49 @@ if clang:
 if debug_build:
     extra_compile_args.append('-DDEBUG_MODE')
 
-extra_include_dirs = []
+include_dirs = [numpy.get_include()]
 if distributions_inc is not None:
-    extra_include_dirs.append(distributions_inc)
+    include_dirs.append(distributions_inc)
+if microscopes_common_inc is not None:
+    include_dirs.append(microscopes_common_inc)
+if microscopes_mixturemodel_inc is not None:
+    include_dirs.append(microscopes_mixturemodel_inc)
 
-extra_link_args = []
+library_dirs = []
 if distributions_lib is not None:
-    extra_link_args.extend([
-        '-L' + distributions_lib,
-        '-Wl,-rpath,' + distributions_lib
-    ])
+    library_dirs.append(distributions_lib)
+if microscopes_common_lib is not None:
+    library_dirs.append(microscopes_common_lib)
+if microscopes_mixturemodel_lib is not None:
+    library_dirs.append(microscopes_mixturemodel_lib)
 
 def make_extension(module_name):
     sources = [module_name.replace('.', '/') + '.pyx']
     return Extension(
         module_name,
         sources=sources,
-        libraries=["microscopes_common", "microscopes_mixturemodel", "protobuf", "distributions_shared"],
         language="c++",
-        include_dirs=[numpy.get_include(), '{}/include'.format(microscopes_common_repo), 'include'] + extra_include_dirs,
-        extra_compile_args=extra_compile_args,
-        extra_link_args=extra_link_args)
+        include_dirs=include_dirs,
+        libraries=["microscopes_common", "microscopes_mixturemodel",
+                   "protobuf", "distributions_shared"],
+        library_dirs=library_dirs,
+        extra_compile_args=extra_compile_args)
 
 extensions = cythonize([
     make_extension('microscopes.cxx.mixture.model'),
     make_extension('microscopes.cxx.mixture._model'),
-], include_path=[microscopes_common_repo])
+], include_path=[microscopes_common_cython_inc])
 
-setup(ext_modules=extensions)
+setup(
+    version='0.1',
+    name='microscopes-mixturemodel',
+    description='XYZ',
+    long_description='XYZ long',
+    packages=(
+        'microscopes',
+        'microscopes.cxx',
+        'microscopes.cxx.mixture',
+        'microscopes.py',
+        'microscopes.py.mixture',
+    ),
+    ext_modules=extensions)

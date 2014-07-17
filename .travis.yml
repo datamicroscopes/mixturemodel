@@ -3,7 +3,9 @@ python:
   - "2.7"
 virtualenv:
   system_site_packages: true
-before_install: make travis_before_install
+before_install:
+  - make travis_before_install
+  - export LD_LIBRARY_PATH=$VIRTUAL_ENV/lib:$LD_LIBRARY_PATH
 install: make travis_install
 script: make travis_script
 notifications:
