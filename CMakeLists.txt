@@ -31,7 +31,7 @@ link_directories(${MICROSCOPES_COMMON_LIBRARY_DIRS})
 
 include_directories(include)
 install(DIRECTORY include/ DESTINATION include FILES_MATCHING PATTERN "*.h*")
-install(DIRECTORY microscopes DESTINATION cython FILES_MATCHING PATTERN "*.pxd")
+install(DIRECTORY microscopes DESTINATION cython FILES_MATCHING PATTERN "*.pxd" PATTERN "__init__.py")
 
 set(MICROSCOPES_MIXTUREMODEL_SOURCE_FILES src/mixture/model.cpp)
 add_library(microscopes_mixturemodel SHARED ${MICROSCOPES_MIXTUREMODEL_SOURCE_FILES})
