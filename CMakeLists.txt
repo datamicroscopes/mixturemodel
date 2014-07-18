@@ -4,6 +4,8 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 project(microscopes_mixturemodel)
 
 set(CMAKE_CXX_FLAGS_BASE "${CMAKE_CXX_FLAGS} -fPIC -g -MD -Wall -std=c++0x")
+# taken from distributions
+set(CMAKE_CXX_FLAGS_MATHOPT "-mfpmath=sse -msse4.1 -ffast-math -funsafe-math-optimizations")
 
 if(APPLE)
   set(CMAKE_CXX_FLAGS_BASE "${CMAKE_CXX_FLAGS_BASE} -stdlib=libc++")
@@ -13,8 +15,8 @@ if(APPLE)
   set(CMAKE_CXX_FLAGS_BASE "${CMAKE_CXX_FLAGS_BASE} -Wno-deprecated-register")
 endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_BASE} -O3 -DNDEBUG")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_BASE} -O3 -DNDEBUG")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_BASE} -O3 -DNDEBUG ${CMAKE_CXX_FLAGS_MATHOPT}")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_BASE} -O3 -DNDEBUG ${CMAKE_CXX_FLAGS_MATHOPT}")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_BASE} -DDEBUG_MODE")
 
 if(DEFINED EXTRA_INCLUDE_PATH)
