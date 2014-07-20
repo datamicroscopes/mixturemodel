@@ -44,26 +44,6 @@ cdef numpy_dataview get_dataview_for(y):
 
     return numpy_dataview(inp_data)
 
-cdef vector[shared_ptr[c_component_model]] get_cmodels(models):
-    cdef vector[shared_ptr[c_component_model]] c_models
-    for m in models:
-        if not isinstance(m, model_descriptor):
-            raise ValueError("invalid model given")
-        c_models.push_back((<_base>m._c_descriptor).get())
-    return c_models
-
-cdef class fixed_model_definition:
-    def __cinit__(self, int groups, models):
-        self._thisptr.reset(
-            new c_fixed_model_definition(groups, get_cmodels(models)))
-        self._groups = groups
-        self._models = list(models)
-
-cdef class model_definition:
-    def __cinit__(self, models):
-        self._thisptr.reset(new c_model_definition(get_cmodels(models)))
-        self._models = list(models)
-
 # XXX: fixed_state and state duplicate code for now
 
 cdef class fixed_state:
@@ -74,13 +54,21 @@ cdef class fixed_state:
         # note: python cannot overload __cinit__(), so we 
         # use kwargs to handle both the random initialization case and
         # the deserialize from string case
-        if not ('data' in kwargs ^ 'bytes' in kwargs):
+        if not (('data' in kwargs) ^ ('bytes' in kwargs)):
             raise ValueError("need exaclty one of `data' or `bytes'")
 
         if 'data' in kwargs:
             # handle the random initialization case
+
+            data = kwargs['data']
+            if not isinstance(data, abstract_dataview):
+                raise ValueError("need dataview for data")
+
             if 'r' not in kwargs:
                 raise ValueError("need parameter `r'")
+            r = kwargs['r']
+            if not isinstance(r, rng):
+                raise ValueError("need prng for parameter `r'")
 
             if 'cluster_hp' in kwargs:
                 cluster_hp = kwargs['cluster_hp']
@@ -113,8 +101,8 @@ cdef class fixed_state:
                 defn._thisptr.get()[0],
                 cluster_hp_bytes,
                 c_feature_hps_bytes,
-                (<abstract_dataview>kwargs['data'])._thisptr.get()[0],
-                (<rng>kwargs['r'])._thisptr[0])
+                (<abstract_dataview>data)._thisptr.get()[0],
+                (<rng>r)._thisptr[0])
         else:
             # handle the deserialize case
             self._thisptr = c_deserialize_fixed(
@@ -125,9 +113,14 @@ cdef class fixed_state:
             raise RuntimeError("could not properly construct fixed_state")
 
     # XXX: get rid of these introspection methods in the future
+    def get_feature_types(self):
+        models = self._defn._models
+        types = [m.py_desc()._model_module for m in models]
+        return types
+
     def get_feature_dtypes(self):
         models = self._defn._models
-        dtypes = [('', m._py_descriptor.get_np_dtype()) for m in models]
+        dtypes = [('', m.py_desc().get_np_dtype()) for m in models]
         return np.dtype(dtypes)
 
     def get_cluster_hp(self):
@@ -143,19 +136,23 @@ cdef class fixed_state:
         self._thisptr.get().set_cluster_hp(m.SerializeToString())
 
     def get_feature_hp(self, int i):
+        models = self._defn._models
         raw = str(self._thisptr.get().get_feature_hp(i))
-        return self._models[i][0].shared_bytes_to_dict(raw)
+        return models[i].py_desc().shared_bytes_to_dict(raw)
 
     def set_feature_hp(self, int i, dict d):
-        cdef hyperparam_bag_t raw = self._models[i][0].shared_dict_to_bytes(d)
+        models = self._defn._models
+        cdef hyperparam_bag_t raw = models[i].py_desc().shared_dict_to_bytes(d)
         self._thisptr.get().set_feature_hp(i, raw)
 
     def get_suffstats(self, int gid, int fid):
+        models = self._defn._models
         raw = str(self._thisptr.get().get_suffstats(gid, fid))
-        return self._models[fid][0].group_bytes_to_dict(raw)
+        return models[fid].py_desc().group_bytes_to_dict(raw)
 
     def set_suffstats(self, int gid, int fid, dict d):
-        cdef suffstats_bag_t raw = self._models[fid][0].shared_dict_to_bytes(d)
+        models = self._defn._models
+        cdef suffstats_bag_t raw = models[fid].py_desc().shared_dict_to_bytes(d)
         self._thisptr.get().set_suffstats(gid, fid, raw)
 
     def assignments(self):
@@ -168,7 +165,7 @@ cdef class fixed_state:
         return self._thisptr.get().nentities()
 
     def nfeatures(self):
-        return len(self._models)
+        return len(self._defn._models)
 
     def groupsize(self, int gid):
         return self._thisptr.get().groupsize(gid)
@@ -204,7 +201,7 @@ cdef class fixed_state:
     def score_data(self, features, groups, rng r):
         assert r
         if features is None:
-            features = range(len(self._models))
+            features = range(len(self._defn._models))
         elif not hasattr(features, '__iter__'):
             features = [features]
 
@@ -264,13 +261,21 @@ cdef class state:
         # note: python cannot overload __cinit__(), so we 
         # use kwargs to handle both the random initialization case and
         # the deserialize from string case
-        if not ('data' in kwargs ^ 'bytes' in kwargs):
+        if not (('data' in kwargs) ^ ('bytes' in kwargs)):
             raise ValueError("need exaclty one of `data' or `bytes'")
 
         if 'data' in kwargs:
             # handle the random initialization case
+
+            data = kwargs['data']
+            if not isinstance(data, abstract_dataview):
+                raise ValueError("need dataview for data")
+
             if 'r' not in kwargs:
                 raise ValueError("need parameter `r'")
+            r = kwargs['r']
+            if not isinstance(r, rng):
+                raise ValueError("need prng for parameter `r'")
 
             if 'cluster_hp' in kwargs:
                 cluster_hp = kwargs['cluster_hp']
@@ -290,10 +295,10 @@ cdef class state:
                         len(feature_hps),
                         defn._thisptr.get().nmodels()))
             else:
-                feature_hps = [m._default_params for m in defn._models] 
+                feature_hps = [m.default_params() for m in defn._models] 
 
             feature_hps_bytes = [
-                m.shared_dict_to_bytes(hp) \
+                m.py_desc().shared_dict_to_bytes(hp) \
                     for hp, m in zip(feature_hps, defn._models)]
             for s in feature_hps_bytes:
                 c_feature_hps_bytes.push_back(s)
@@ -302,8 +307,8 @@ cdef class state:
                 defn._thisptr.get()[0],
                 cluster_hp_bytes,
                 c_feature_hps_bytes,
-                (<abstract_dataview>kwargs['data'])._thisptr.get()[0],
-                (<rng>kwargs['r'])._thisptr[0])
+                (<abstract_dataview>data)._thisptr.get()[0],
+                (<rng>r)._thisptr[0])
         else:
             # handle the deserialize case
             self._thisptr = c_deserialize(
@@ -314,9 +319,14 @@ cdef class state:
             raise RuntimeError("could not properly construct state")
 
     # XXX: get rid of these introspection methods in the future
+    def get_feature_types(self):
+        models = self._defn._models
+        types = [m.py_desc()._model_module for m in models]
+        return types
+
     def get_feature_dtypes(self):
         models = self._defn._models
-        dtypes = [('', m._py_descriptor.get_np_dtype()) for m in models]
+        dtypes = [('', m.py_desc().get_np_dtype()) for m in models]
         return np.dtype(dtypes)
 
     def get_cluster_hp(self):
@@ -332,18 +342,22 @@ cdef class state:
 
     def get_feature_hp(self, int i):
         raw = str(self._thisptr.get().get_feature_hp(i))
-        return self._models[i][0].shared_bytes_to_dict(raw)
+        models = self._defn._models
+        return models[i].py_desc().shared_bytes_to_dict(raw)
 
     def set_feature_hp(self, int i, dict d):
-        cdef hyperparam_bag_t raw = self._models[i][0].shared_dict_to_bytes(d)
+        models = self._defn._models
+        cdef hyperparam_bag_t raw = models[i].py_desc().shared_dict_to_bytes(d)
         self._thisptr.get().set_feature_hp(i, raw)
 
     def get_suffstats(self, int gid, int fid):
+        models = self._defn._models
         raw = str(self._thisptr.get().get_suffstats(gid, fid))
-        return self._models[fid][0].group_bytes_to_dict(raw)
+        return models[fid].py_desc().group_bytes_to_dict(raw)
 
     def set_suffstats(self, int gid, int fid, dict d):
-        cdef suffstats_bag_t raw = self._models[fid][0].shared_dict_to_bytes(d)
+        models = self._defn._models
+        cdef suffstats_bag_t raw = models[fid].py_desc().shared_dict_to_bytes(d)
         self._thisptr.get().set_suffstats(gid, fid, raw)
 
     def assignments(self):
@@ -359,7 +373,7 @@ cdef class state:
         return self._thisptr.get().nentities()
 
     def nfeatures(self):
-        return len(self._models)
+        return len(self._defn._models)
 
     def groupsize(self, int gid):
         return self._thisptr.get().groupsize(gid)
@@ -402,7 +416,7 @@ cdef class state:
     def score_data(self, features, groups, rng r):
         assert r
         if features is None:
-            features = range(len(self._models))
+            features = range(len(self._defn._models))
         elif not hasattr(features, '__iter__'):
             features = [features]
 
@@ -460,13 +474,39 @@ cdef class state:
 def bind_fixed(fixed_state s, abstract_dataview data):
     cdef shared_ptr[c_fixed_entity_based_state_object] px
     px.reset(new c_fixed_model(s._thisptr, data._thisptr))
-    cdef fixed_entity_based_state_object ret = fixed_entity_based_state_object(s._models)
+    cdef fixed_entity_based_state_object ret = \
+        fixed_entity_based_state_object(s._defn._models)
     ret.set_fixed(px)
     return ret
 
 def bind(state s, abstract_dataview data):
     cdef shared_ptr[c_entity_based_state_object] px
     px.reset(new c_model(s._thisptr, data._thisptr))
-    cdef entity_based_state_object ret = entity_based_state_object(s._models)
+    cdef entity_based_state_object ret = \
+        entity_based_state_object(s._defn._models)
     ret.set_entity(px)
     return ret
+
+def initialize_fixed(fixed_model_definition defn,
+                     cluster_hp,
+                     feature_hps,
+                     abstract_dataview data,
+                     rng r):
+    return fixed_state(defn=defn, cluster_hp=cluster_hp,
+                       feature_hps=feature_hps, data=data,
+                       r=r)
+
+def initialize(model_definition defn,
+               cluster_hp,
+               feature_hps,
+               abstract_dataview data,
+               rng r):
+    return state(defn=defn, cluster_hp=cluster_hp,
+                 feature_hps=feature_hps, data=data, 
+                 r=r)
+
+def deserialize_fixed(fixed_model_definition defn, bytes):
+    return fixed_state(defn=defn, bytes=bytes)
+
+def deserialize(model_definition defn, bytes):
+    return state(defn=defn, bytes=bytes)

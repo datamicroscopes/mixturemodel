@@ -314,7 +314,10 @@ class model_definition {
 public:
   model_definition(
       const std::vector<std::shared_ptr<models::model>> &models)
-    : models_(models) {}
+    : models_(models)
+  {
+    std::cout << "models_.size(): " << models_.size() << std::endl;
+  }
 
   std::vector<common::runtime_type>
   get_runtime_types() const
@@ -531,7 +534,7 @@ public:
       p->set_feature_hp(i, feature_inits[i]);
     const auto assign =
       common::util::random_assignment_vector(data.size(), rng);
-    const size_t ngroups = *std::max_element(assign.begin(), assign.end());
+    const size_t ngroups = *std::max_element(assign.begin(), assign.end()) + 1;
     for (size_t i = 0; i < ngroups; i++)
       p->create_group(rng);
     data.reset();

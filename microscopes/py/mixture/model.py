@@ -2,6 +2,7 @@ import numpy as np
 import numpy.ma as ma
 
 from microscopes.py.common.groups import FixedNGroupManager
+from microscopes.py.common.util import random_assignment_vector
 from distributions.dbg.random import sample_discrete_log, sample_discrete
 
 def sample(n, s, r=None):
@@ -61,30 +62,65 @@ class state(object):
     the underlying distributions python objects don't bother)
     """
 
-    def __init__(self, n, featuretypes):
-        self._groups = FixedNGroupManager(n)
-        self._alpha = None
-        self._featuretypes = featuretypes
-        def init_shared(typ):
-            return typ.Shared()
-        self._featureshares = map(init_shared, self._featuretypes)
-        self._nomask = tuple(False for _ in xrange(len(self._featuretypes)))
-        self._y_dtype = self._mk_y_dtype()
+    def __init__(self, defn, **kwargs):
+        # XXX: let's get rid of this dependency (this dep also exists in our
+        # C++ versions)
+        self._defn = defn
+        if not (('data' in kwargs) ^ ('bytes' in kwargs)):
+            raise ValueError("need exaclty one of `data' or `bytes'")
 
-    def _mk_dtype_desc(self, fi):
-        typ, shared = self._featuretypes[fi], self._featureshares[fi]
-        if hasattr(shared, 'dimension') and shared.dimension() > 1:
-            return ('', typ.Value, (shared.dimension(),))
-        return ('', typ.Value)
+        if 'data' in kwargs:
+            # handle the random initialization case
+            if 'cluster_hp' in kwargs:
+                cluster_hp = kwargs['cluster_hp']
+            else:
+                cluster_hp = {'alpha':1.}
+
+            if 'feature_hps' in kwargs:
+                feature_hps = kwargs['feature_hps']
+                if len(feature_hps) != len(defn._models):
+                    raise ValueError("expecting {} models, got {}".format(
+                        len(feature_hps), len(defn._models)))
+            else:
+                feature_hps = [m.default_params() for m in defn._models]
+
+            data = kwargs['data']
+            self._groups = FixedNGroupManager(data.size())
+            self._alpha = float(cluster_hp['alpha'])
+            self._featuretypes = tuple(
+                m.py_desc()._model_module for m in defn._models)
+            def init_shared(args):
+                typ, hp = args
+                s = typ.Shared()
+                s.load(hp)
+                return s
+            self._featureshares = map(
+                    init_shared, zip(self._featuretypes, feature_hps))
+            self._nomask = tuple(
+                    False for _ in xrange(len(self._featuretypes)))
+            self._y_dtype = self._mk_y_dtype()
+
+            assignment = random_assignment_vector(data.size())
+            ngroups = max(assignment) + 1
+            for _ in xrange(ngroups):
+                self.create_group()
+
+            for i, yi in data.view(shuffle=False):
+                self.add_value(assignment[i], i, yi)
+        else:
+            raise RuntimeError("deserialize case unimplemented")
 
     def _mk_y_dtype(self):
-        return [self._mk_dtype_desc(i) for i in xrange(len(self._featuretypes))]
+        models = self._defn._models
+        dtypes = [m.py_desc().get_np_dtype() for m in models]
+        return np.dtype([('', dtype) for dtype in dtypes])
 
     def get_feature_types(self):
         return list(self._featuretypes)
 
     def get_feature_dtypes(self):
-        return list(self._y_dtype)
+        # XXX: make a copy
+        return self._y_dtype
 
     def get_cluster_hp(self):
         return {'alpha':self._alpha}
@@ -256,6 +292,7 @@ class state(object):
         for i, ci in enumerate(assignments):
             if i == 0:
                 continue
+            assert ci != -1
             cnt = counts.get(ci, 0)
             numer = cnt if cnt else self._alpha
             denom = i + self._alpha
@@ -269,17 +306,11 @@ class state(object):
         """
         return self.score_assignment() + self.score_data(None, None)
 
-    def reset(self):
-        """
-        reset to the same condition as upon construction
-        """
-        self._groups = FixedNGroupManager(self.nentities())
-
     def dcheck_consistency(self):
         # XXX: TODO
         pass
 
-class bound_state(object):
+class model(object):
     def __init__(self, impl, data):
         self._impl = impl
         self._data = data
@@ -347,5 +378,13 @@ class bound_state(object):
     def delete_group(self, gid):
         self._impl.delete_group(gid)
 
+def initialize(defn, cluster_hp, feature_hps, data, r=None):
+    return state(defn=defn, cluster_hp=cluster_hp,
+                 feature_hps=feature_hps, data=data,
+                 r=r)
+
+def deserialize(defn, bytes):
+    return state(defn=defn, bytes=bytes)
+
 def bind(state, data):
-    return bound_state(state, data)
+    return model(state, data)

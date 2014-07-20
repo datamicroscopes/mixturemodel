@@ -1,17 +1,24 @@
 # test the low level primitive operations
 
 from distributions.util import scores_to_probs
+from distributions.dbg.models import \
+    bb as dist_bb, \
+    bnb as dist_bnb, \
+    nich as dist_nich
 
-from distributions.dbg.models import bb as py_bb
-from distributions.dbg.models import bnb as py_bnb
-from distributions.dbg.models import nich as py_nich
-from microscopes.py.mixture.model import state as py_state
-
-from microscopes.cxx.models import bb as cxx_bb
-from microscopes.cxx.models import bnb as cxx_bnb
-from microscopes.cxx.models import nich as cxx_nich
-from microscopes.cxx.mixture.model import state as cxx_state
+from microscopes.models import bb, bnb, nich
+from microscopes.mixture.definition import model_definition
 from microscopes.cxx.common.rng import rng
+
+from microscopes.py.mixture.model import \
+    initialize as py_initialize
+from microscopes.cxx.mixture.model import \
+    initialize as cxx_initialize
+
+from microscopes.py.common.recarray.dataview import \
+    numpy_dataview as py_numpy_dataview
+from microscopes.cxx.common.recarray.dataview import \
+    numpy_dataview as cxx_numpy_dataview
 
 import itertools as it
 import numpy as np
@@ -37,54 +44,63 @@ def assert_suff_stats_equal(py_s, cxx_s, features, groups):
         cxx_ss = cxx_s.get_suffstats(gid, fid)
         assert_dict_almost_equals(py_ss, cxx_ss)
 
+def unset(s, data, r):
+    for i, yi in enumerate(data):
+        s.remove_value(i, yi, r)
+
+def ensure_k_groups(s, k, r):
+    groups = sorted(list(s.groups()))
+    if len(groups) < k:
+        for _ in xrange(k-len(groups)):
+            s.create_group(r)
+    elif len(groups) > k:
+        for gid in groups[k:]:
+            s.delete_group(gid)
+
 def test_operations():
     N = 10
     R = rng(12)
-
-    py_s = py_state(N, [py_bb, py_bb, py_nich, py_bb])
-    py_s.set_cluster_hp({'alpha':2.0})
-    py_s.set_feature_hp(0, py_bb.EXAMPLES[0]['shared'])
-    py_s.set_feature_hp(1, py_bb.EXAMPLES[0]['shared'])
-    py_s.set_feature_hp(2, py_nich.EXAMPLES[0]['shared'])
-    py_s.set_feature_hp(3, py_bb.EXAMPLES[0]['shared'])
-
-    cxx_s = cxx_state(N, [cxx_bb, cxx_bb, cxx_nich, cxx_bb])
-    cxx_s.set_cluster_hp({'alpha':2.0})
-    cxx_s.set_feature_hp(0, py_bb.EXAMPLES[0]['shared'])
-    cxx_s.set_feature_hp(1, py_bb.EXAMPLES[0]['shared'])
-    cxx_s.set_feature_hp(2, py_nich.EXAMPLES[0]['shared'])
-    cxx_s.set_feature_hp(3, py_bb.EXAMPLES[0]['shared'])
-
-    assert py_s.nentities() == N
-    assert cxx_s.nentities() == N
-
     def mkrow():
         return (np.random.choice([False, True]),
                 np.random.choice([False, True]),
                 np.random.random(),
                 np.random.choice([False, True]))
-
     dtype = [('',bool), ('',bool), ('',float), ('',bool)]
-
     # non-masked data
     data = [mkrow() for _ in xrange(N)]
     data = np.array(data, dtype=dtype)
 
-    py_egid = py_s.create_group()
-    assert py_egid == 0
-    py_egid = py_s.create_group()
-    assert py_egid == 1
+    defn = model_definition([bb, bb, nich, bb])
+    init_args = {
+        'defn' : defn,
+        'cluster_hp' : {'alpha':2.0},
+        'feature_hps' : [
+            dist_bb.EXAMPLES[0]['shared'],
+            dist_bb.EXAMPLES[0]['shared'],
+            dist_nich.EXAMPLES[0]['shared'],
+            dist_bb.EXAMPLES[0]['shared'],
+        ],
+        'r' : R,
+    }
+    py_s = py_initialize(data=py_numpy_dataview(data), **init_args)
+    cxx_s = cxx_initialize(data=cxx_numpy_dataview(data), **init_args)
 
-    cxx_egid = cxx_s.create_group(R)
-    assert cxx_egid == 0
-    cxx_egid = cxx_s.create_group(R)
-    assert cxx_egid == 1
+    # *_initialize() randomly assigns all entities to a group, so we'll have to
+    # unset this assignment for this test
+    unset(py_s, data, R)
+    unset(cxx_s, data, R)
+
+    ensure_k_groups(py_s, 3, R)
+    ensure_k_groups(cxx_s, 3, R)
+
+    assert py_s.nentities() == N
+    assert cxx_s.nentities() == N
 
     py_s.dcheck_consistency()
     cxx_s.dcheck_consistency()
 
-    assert py_s.ngroups() == 2 and set(py_s.empty_groups()) == set([0, 1])
-    assert cxx_s.ngroups() == 2 and set(cxx_s.empty_groups()) == set([0, 1])
+    assert py_s.ngroups() == 3 and set(py_s.empty_groups()) == set([0, 1, 2])
+    assert cxx_s.ngroups() == 3 and set(cxx_s.empty_groups()) == set([0, 1, 2])
 
     for i, yi in enumerate(data):
         egid = i % 2
@@ -104,9 +120,6 @@ def test_operations():
         cxx_s.dcheck_consistency()
 
     assert_suff_stats_equal(py_s, cxx_s, features=range(4), groups=range(2))
-
-    py_s.create_group()
-    cxx_s.create_group(R)
 
     newrow = mkrow()
     newdata = np.array([newrow], dtype=dtype)
@@ -146,37 +159,37 @@ def test_masked_operations():
     N = 10
     R = rng(2347785)
 
-    py_s = py_state(N, [py_bb, py_bnb, py_nich])
-    py_s.set_cluster_hp({'alpha':10.0})
-    py_s.set_feature_hp(0, py_bb.EXAMPLES[0]['shared'])
-    py_s.set_feature_hp(1, py_bnb.EXAMPLES[0]['shared'])
-    py_s.set_feature_hp(2, py_nich.EXAMPLES[0]['shared'])
-
-    cxx_s = cxx_state(N, [cxx_bb, cxx_bnb, cxx_nich])
-    cxx_s.set_cluster_hp({'alpha':10.0})
-    cxx_s.set_feature_hp(0, py_bb.EXAMPLES[0]['shared'])
-    cxx_s.set_feature_hp(1, py_bnb.EXAMPLES[0]['shared'])
-    cxx_s.set_feature_hp(2, py_nich.EXAMPLES[0]['shared'])
-
     dtype = [('',bool), ('',int), ('',float)]
-
     def randombool():
         return np.random.choice([False, True])
-
     def mkrow():
         return (randombool(), np.random.randint(1, 10), np.random.random())
     def mkmask():
         return (randombool(), randombool(), randombool())
-
-    # non-masked data
     data = [mkrow() for _ in xrange(N)]
     data = np.array(data, dtype=dtype)
     mask = [mkmask() for _ in xrange(N)]
     data = ma.masked_array(data, mask=mask)
 
-    for _ in xrange(3):
-        py_s.create_group()
-        cxx_s.create_group(R)
+    defn = model_definition([bb, bnb, nich])
+    init_args = {
+        'defn' : defn,
+        'cluster_hp' : {'alpha':10.0},
+        'feature_hps': [
+            dist_bb.EXAMPLES[0]['shared'],
+            dist_bnb.EXAMPLES[0]['shared'],
+            dist_nich.EXAMPLES[0]['shared'],
+        ],
+        'r' : R,
+    }
+    py_s = py_initialize(data=py_numpy_dataview(data), **init_args)
+    cxx_s = cxx_initialize(data=cxx_numpy_dataview(data), **init_args)
+
+    # see comment above
+    unset(py_s, data, R)
+    unset(cxx_s, data, R)
+    ensure_k_groups(py_s, 3, R)
+    ensure_k_groups(cxx_s, 3, R)
 
     for i, yi in enumerate(data):
         egid = i % 2
@@ -195,37 +208,35 @@ def test_masked_operations():
 
     assert_suff_stats_equal(py_s, cxx_s, features=range(3), groups=range(3))
 
+@attr('wip')
 def test_sample_post_pred():
     N = 10
     R = rng(5483932)
     D = 4
 
-    py_s = py_state(N, [py_bb]*D)
-    py_s.set_cluster_hp({'alpha':2.0})
-    for i in xrange(D):
-        py_s.set_feature_hp(i, py_bb.EXAMPLES[0]['shared'])
-
-    cxx_s = cxx_state(N, [cxx_bb]*D)
-    cxx_s.set_cluster_hp({'alpha':2.0})
-    for i in xrange(D):
-        cxx_s.set_feature_hp(i, py_bb.EXAMPLES[0]['shared'])
-
     def randombool():
         return np.random.choice([False, True])
-
     def mkrow():
         return tuple(randombool() for _ in xrange(D))
-
     dtype = [('',bool)]*D
-
-    # non-masked data
     data = [mkrow() for _ in xrange(N)]
     data = np.array(data, dtype=dtype)
 
+    defn = model_definition([bb]*D)
+    init_args = {
+        'defn' : defn,
+        'cluster_hp' : {'alpha':2.0},
+        'feature_hps': [dist_bb.EXAMPLES[0]['shared']]*D,
+        'r' : R,
+    }
+    py_s = py_initialize(data=py_numpy_dataview(data), **init_args)
+    cxx_s = cxx_initialize(data=cxx_numpy_dataview(data), **init_args)
+
     G = 3
-    for _ in xrange(G):
-        py_s.create_group()
-        cxx_s.create_group(R)
+    unset(py_s, data, R)
+    unset(cxx_s, data, R)
+    ensure_k_groups(py_s, 3, R)
+    ensure_k_groups(cxx_s, 3, R)
 
     for i, yi in enumerate(data):
         egid = i % G

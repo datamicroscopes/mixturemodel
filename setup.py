@@ -170,6 +170,7 @@ def make_extension(module_name):
         extra_link_args=extra_link_args)
 
 extensions = cythonize([
+    make_extension('microscopes.mixture.definition'),
     make_extension('microscopes.cxx.mixture.model'),
     make_extension('microscopes.cxx.mixture._model'),
 ], include_path=[microscopes_common_cython_inc])
@@ -180,10 +181,8 @@ setup(
     description='XYZ',
     long_description='XYZ long',
     packages=(
-        'microscopes',
-        'microscopes.cxx',
+        'microscopes.mixture',
         'microscopes.cxx.mixture',
-        'microscopes.py',
         'microscopes.py.mixture',
     ),
     ext_modules=extensions)

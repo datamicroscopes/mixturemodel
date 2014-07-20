@@ -18,12 +18,12 @@ from microscopes.cxx._models_h cimport model as c_model
 cdef extern from "microscopes/mixture/model.hpp" namespace "microscopes::mixture":
 
     cdef cppclass fixed_model_definition:
-        fixed_model_definition(size_t, const vector[shared_ptr[c_model]]) except +
+        fixed_model_definition(size_t, const vector[shared_ptr[c_model]] &) except +
         vector[runtime_type] get_runtime_types() except +
         size_t nmodels()
 
     cdef cppclass model_definition:
-        model_definition(const vector[shared_ptr[c_model]]) except +
+        model_definition(const vector[shared_ptr[c_model]] &) except +
         vector[runtime_type] get_runtime_types() except +
         size_t nmodels()
 
