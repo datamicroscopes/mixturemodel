@@ -6,11 +6,11 @@ namespace detail {
 
 template class state<common::fixed_group_manager>;
 template class state<common::group_manager>;
-template class bound_state<
+template class model<
   mixture::fixed_state,
   common::fixed_entity_based_state_object
 >;
-template class bound_state<
+template class model<
   mixture::state,
   common::entity_based_state_object
 >;

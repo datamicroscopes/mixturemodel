@@ -13,9 +13,21 @@ from microscopes.cxx.common._runtime_type_h cimport runtime_type
 from microscopes.cxx.common._entity_state_h cimport \
     fixed_entity_based_state_object, \
     entity_based_state_object
-from microscopes.cxx._models_h cimport model as component_model
+from microscopes.cxx._models_h cimport model as c_model
 
 cdef extern from "microscopes/mixture/model.hpp" namespace "microscopes::mixture":
+
+    cdef cppclass fixed_model_definition:
+        fixed_model_definition(size_t, const vector[shared_ptr[c_model]]) except +
+        vector[runtime_type] get_runtime_types() except +
+        size_t nmodels()
+
+    cdef cppclass model_definition:
+        model_definition(const vector[shared_ptr[c_model]]) except +
+        vector[runtime_type] get_runtime_types() except +
+        size_t nmodels()
+
+
     # XXX: ideally, state and fixed_state would share a common parent so we
     # didn't have to duplicate the available methods. but since the C++ parent
     # of state/fixed_state is a template class where the first arg is a
@@ -23,8 +35,6 @@ cdef extern from "microscopes/mixture/model.hpp" namespace "microscopes::mixture
     # about this
 
     cdef cppclass fixed_state:
-        fixed_state(size_t, size_t, const vector[shared_ptr[component_model]] &) except +
-
         hyperparam_bag_t get_cluster_hp() except +
         void set_cluster_hp(const hyperparam_bag_t &) except +
         hyperparam_bag_t get_feature_hp(size_t) except +
@@ -43,8 +53,6 @@ cdef extern from "microscopes/mixture/model.hpp" namespace "microscopes::mixture
         pair[vector[size_t], vector[float]] score_value(const row_accessor &, rng_t &) except +
         float score_data(const vector[size_t] &, const vector[size_t] &, rng_t &) except +
 
-        vector[runtime_type] get_runtime_types() except +
-
         size_t sample_post_pred(const row_accessor &, row_mutator &, rng_t &) except +
         float score_assignment() except +
         float score_joint(rng_t &) except +
@@ -53,8 +61,6 @@ cdef extern from "microscopes/mixture/model.hpp" namespace "microscopes::mixture
         void dcheck_consistency() except +
 
     cdef cppclass state:
-        state(size_t, const vector[shared_ptr[component_model]] &) except +
-
         hyperparam_bag_t get_cluster_hp() except +
         void set_cluster_hp(const hyperparam_bag_t &) except +
         hyperparam_bag_t get_feature_hp(size_t) except +
@@ -79,7 +85,6 @@ cdef extern from "microscopes/mixture/model.hpp" namespace "microscopes::mixture
         float score_data(const vector[size_t] &, const vector[size_t] &, rng_t &) except +
 
         void ensure_k_empty_groups(size_t, cbool, rng_t &) except +
-        vector[runtime_type] get_runtime_types() except +
 
         size_t sample_post_pred(const row_accessor &, row_mutator &, rng_t &) except +
         float score_assignment() except +
@@ -88,10 +93,10 @@ cdef extern from "microscopes/mixture/model.hpp" namespace "microscopes::mixture
         # for debugging purposes
         void dcheck_consistency() except +
 
-    cdef cppclass bound_fixed_state(fixed_entity_based_state_object):
-        bound_fixed_state(const shared_ptr[fixed_state] &,
-                          const shared_ptr[dataview] &) except +
-
-    cdef cppclass bound_state(entity_based_state_object):
-        bound_state(const shared_ptr[state] &,
+    cdef cppclass fixed_model:
+        fixed_model(const shared_ptr[fixed_state] &,
                     const shared_ptr[dataview] &) except +
+
+    cdef cppclass model:
+        model(const shared_ptr[state] &,
+              const shared_ptr[dataview] &) except +

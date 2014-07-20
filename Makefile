@@ -1,3 +1,7 @@
+all:
+	@echo "Setting up cmake"
+	[ -d build ] || (mkdir build && cd build && eval `python ../cmake/print_cmake_command.py`)
+
 .PHONY: travis_before_install
 travis_before_install:
 	(cd .travis && python before_install_microscopes_common.py)

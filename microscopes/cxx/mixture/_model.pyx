@@ -44,22 +44,91 @@ cdef numpy_dataview get_dataview_for(y):
 
     return numpy_dataview(inp_data)
 
+cdef vector[shared_ptr[c_component_model]] get_cmodels(models):
+    cdef vector[shared_ptr[c_component_model]] c_models
+    for m in models:
+        if not isinstance(m, model_descriptor):
+            raise ValueError("invalid model given")
+        c_models.push_back((<_base>m._c_descriptor).get())
+    return c_models
+
+cdef class fixed_model_definition:
+    def __cinit__(self, int groups, models):
+        self._thisptr.reset(
+            new c_fixed_model_definition(groups, get_cmodels(models)))
+        self._groups = groups
+        self._models = list(models)
+
+cdef class model_definition:
+    def __cinit__(self, models):
+        self._thisptr.reset(new c_model_definition(get_cmodels(models)))
+        self._models = list(models)
+
 # XXX: fixed_state and state duplicate code for now
 
 cdef class fixed_state:
-    def __cinit__(self, int n, int k, models):
-        self._models = list(models)
-        cdef vector[shared_ptr[component_model]] cmodels
-        for py_m, c_m in models:
-            cmodels.push_back((<factory>c_m).new_cmodel())
-        self._thisptr.reset(new c_fixed_state(n, k, cmodels))
+    def __cinit__(self, fixed_model_definition defn, **kwargs):
+        self._defn = defn
+        cdef vector[hyperparam_bag_t] c_feature_hps_bytes
 
-    def get_feature_types(self):
-        return [x.get_py_type() for x, _ in self._models]
+        # note: python cannot overload __cinit__(), so we 
+        # use kwargs to handle both the random initialization case and
+        # the deserialize from string case
+        if not ('data' in kwargs ^ 'bytes' in kwargs):
+            raise ValueError("need exaclty one of `data' or `bytes'")
 
+        if 'data' in kwargs:
+            # handle the random initialization case
+            if 'r' not in kwargs:
+                raise ValueError("need parameter `r'")
+
+            if 'cluster_hp' in kwargs:
+                cluster_hp = kwargs['cluster_hp']
+            else:
+                cluster_hp = {'alphas':[1.]*defn._groups}
+
+            def make_cluster_hp_bytes(cluster_hp):
+                m = DirichletDiscrete.Shared()
+                for alpha in cluster_hp['alphas']:
+                    m.alphas.append(float(alpha))
+                return m.SerializeToString()
+            cluster_hp_bytes = make_cluster_hp_bytes(cluster_hp)
+
+            if 'feature_hps' in kwargs:
+                feature_hps = kwargs['feature_hps']
+                if len(feature_hps) != defn._thisptr.get().nmodels():
+                    raise ValueError("expecting {} models, got {}".format(
+                        len(feature_hps),
+                        defn._thisptr.get().nmodels()))
+            else:
+                feature_hps = [m._default_params for m in defn._models] 
+
+            feature_hps_bytes = [
+                m.shared_dict_to_bytes(hp) \
+                    for hp, m in zip(feature_hps, defn._models)]
+            for s in feature_hps_bytes:
+                c_feature_hps_bytes.push_back(s)
+
+            self._thisptr = c_initialize_fixed(
+                defn._thisptr.get()[0],
+                cluster_hp_bytes,
+                c_feature_hps_bytes,
+                (<abstract_dataview>kwargs['data'])._thisptr.get()[0],
+                (<rng>kwargs['r'])._thisptr[0])
+        else:
+            # handle the deserialize case
+            self._thisptr = c_deserialize_fixed(
+                defn._thisptr.get()[0],
+                kwargs['bytes'])
+
+        if self._thisptr.get() == NULL:
+            raise RuntimeError("could not properly construct fixed_state")
+
+    # XXX: get rid of these introspection methods in the future
     def get_feature_dtypes(self):
-        # XXX: this is broken since feature types can be multi-dimensional
-        return [('', tpe.Value) for tpe in self.get_feature_types()]
+        models = self._defn._models
+        dtypes = [('', m._py_descriptor.get_np_dtype()) for m in models]
+        return np.dtype(dtypes)
 
     def get_cluster_hp(self):
         m = DirichletDiscrete.Shared()
@@ -165,7 +234,8 @@ cdef class fixed_state:
         cdef numpy_dataview view = get_dataview_for(y_new)
         cdef row_accessor acc = view._thisptr.get().get()
 
-        cdef vector[runtime_type] out_ctypes = self._thisptr.get().get_runtime_types()
+        cdef vector[runtime_type] out_ctypes = \
+                self._defn._thisptr.get().get_runtime_types() 
         out_dtype = [('', get_np_type(t)) for t in out_ctypes]
 
         # build an appropriate numpy array to store the output
@@ -187,19 +257,67 @@ cdef class fixed_state:
         self._thisptr.get().dcheck_consistency()
 
 cdef class state:
-    def __cinit__(self, int n, models):
-        self._models = list(models)
-        cdef vector[shared_ptr[component_model]] cmodels
-        for py_m, c_m in models:
-            cmodels.push_back((<factory>c_m).new_cmodel())
-        self._thisptr.reset(new c_state(n, cmodels))
+    def __cinit__(self, model_definition defn, **kwargs):
+        self._defn = defn
+        cdef vector[hyperparam_bag_t] c_feature_hps_bytes
 
-    def get_feature_types(self):
-        return [x.get_py_type() for x, _ in self._models]
+        # note: python cannot overload __cinit__(), so we 
+        # use kwargs to handle both the random initialization case and
+        # the deserialize from string case
+        if not ('data' in kwargs ^ 'bytes' in kwargs):
+            raise ValueError("need exaclty one of `data' or `bytes'")
 
+        if 'data' in kwargs:
+            # handle the random initialization case
+            if 'r' not in kwargs:
+                raise ValueError("need parameter `r'")
+
+            if 'cluster_hp' in kwargs:
+                cluster_hp = kwargs['cluster_hp']
+            else:
+                cluster_hp = {'alpha':1.}
+
+            def make_cluster_hp_bytes(cluster_hp):
+                m = CRP()
+                m.alpha = cluster_hp['alpha']
+                return m.SerializeToString()
+            cluster_hp_bytes = make_cluster_hp_bytes(cluster_hp)
+
+            if 'feature_hps' in kwargs:
+                feature_hps = kwargs['feature_hps']
+                if len(feature_hps) != defn._thisptr.get().nmodels():
+                    raise ValueError("expecting {} models, got {}".format(
+                        len(feature_hps),
+                        defn._thisptr.get().nmodels()))
+            else:
+                feature_hps = [m._default_params for m in defn._models] 
+
+            feature_hps_bytes = [
+                m.shared_dict_to_bytes(hp) \
+                    for hp, m in zip(feature_hps, defn._models)]
+            for s in feature_hps_bytes:
+                c_feature_hps_bytes.push_back(s)
+
+            self._thisptr = c_initialize(
+                defn._thisptr.get()[0],
+                cluster_hp_bytes,
+                c_feature_hps_bytes,
+                (<abstract_dataview>kwargs['data'])._thisptr.get()[0],
+                (<rng>kwargs['r'])._thisptr[0])
+        else:
+            # handle the deserialize case
+            self._thisptr = c_deserialize(
+                defn._thisptr.get()[0],
+                kwargs['bytes'])
+
+        if self._thisptr.get() == NULL:
+            raise RuntimeError("could not properly construct state")
+
+    # XXX: get rid of these introspection methods in the future
     def get_feature_dtypes(self):
-        # XXX: this is broken since feature types can be multi-dimensional
-        return [('', tpe.Value) for tpe in self.get_feature_types()]
+        models = self._defn._models
+        dtypes = [('', m._py_descriptor.get_np_dtype()) for m in models]
+        return np.dtype(dtypes)
 
     def get_cluster_hp(self):
         m = CRP()
@@ -317,7 +435,8 @@ cdef class state:
         # ensure the state has 1 empty group
         self._thisptr.get().ensure_k_empty_groups(1, False, r._thisptr[0])
 
-        cdef vector[runtime_type] out_ctypes = self._thisptr.get().get_runtime_types()
+        cdef vector[runtime_type] out_ctypes = \
+                self._defn._thisptr.get().get_runtime_types() 
         out_dtype = [('', get_np_type(t)) for t in out_ctypes]
 
         # build an appropriate numpy array to store the output
@@ -340,14 +459,14 @@ cdef class state:
 
 def bind_fixed(fixed_state s, abstract_dataview data):
     cdef shared_ptr[c_fixed_entity_based_state_object] px
-    px.reset(new c_bound_fixed_state(s._thisptr, data._thisptr))
+    px.reset(new c_fixed_model(s._thisptr, data._thisptr))
     cdef fixed_entity_based_state_object ret = fixed_entity_based_state_object(s._models)
     ret.set_fixed(px)
     return ret
 
 def bind(state s, abstract_dataview data):
     cdef shared_ptr[c_entity_based_state_object] px
-    px.reset(new c_bound_state(s._thisptr, data._thisptr))
+    px.reset(new c_model(s._thisptr, data._thisptr))
     cdef entity_based_state_object ret = entity_based_state_object(s._models)
     ret.set_entity(px)
     return ret

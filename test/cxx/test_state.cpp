@@ -8,19 +8,9 @@
 
 using namespace std;
 using namespace distributions;
+using namespace microscopes;
 using namespace microscopes::common;
 using namespace microscopes::common::recarray;
-using namespace microscopes::models;
-using namespace microscopes::mixture;
-
-template <typename T>
-static string
-protobuf_to_string(const T &t)
-{
-  ostringstream out;
-  t.SerializeToOstream(&out);
-  return out.str();
-}
 
 int
 main(void)
@@ -28,21 +18,22 @@ main(void)
   const size_t D = 28*28;
   rng_t r(5849343);
 
-  vector<shared_ptr<model>> models;
+  vector<shared_ptr<models::model>> models;
   for (size_t i = 0; i < D; i++)
-    models.emplace_back(distributions_factory<BetaBernoulli>().new_instance());
+    models.emplace_back(make_shared<
+        models::distributions_model<BetaBernoulli>>());
 
-  state s(1000, models);
-  state::message_type m_hp;
-  m_hp.set_alpha(2.0);
-  s.set_cluster_hp(protobuf_to_string(m_hp));
+  mixture::model_definition def(models);
 
-  distributions_model<BetaBernoulli>::message_type m_feature_hp;
-  m_feature_hp.set_alpha(1.0);
-  m_feature_hp.set_beta(1.0);
+  shared_ptr<mixture::state> spx(
+      mixture::state::unsafe_initialize(def, 1000));
+  auto s = *spx;
+  s.get_cluster_hp_mutator("alpha").set<float>(2.0);
 
-  for (size_t i = 0; i < D; i++)
-    s.set_feature_hp(i, protobuf_to_string(m_feature_hp));
+  for (size_t i = 0; i < D; i++) {
+    s.get_feature_hp_mutator(i, "alpha").set<float>(1.0);
+    s.get_feature_hp_mutator(i, "beta").set<float>(1.0);
+  }
 
   //const size_t G = strtoul(argv[1], nullptr, 10);
   //cout << "groups: " << G << endl;
