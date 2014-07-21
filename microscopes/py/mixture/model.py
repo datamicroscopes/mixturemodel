@@ -1,8 +1,11 @@
 import numpy as np
 import numpy.ma as ma
 
-from microscopes.py.common.groups import FixedNGroupManager
+from microscopes.py.common.groups import GroupManager
 from microscopes.py.common.util import random_assignment_vector
+from microscopes.io.schema_pb2 import \
+    MixtureModelState as MixtureModelStateMessage, \
+    MixtureModelGroup as MixtureModelGroupMessage
 from distributions.dbg.random import sample_discrete_log, sample_discrete
 
 def sample(n, s, r=None):
@@ -66,6 +69,14 @@ class state(object):
         # XXX: let's get rid of this dependency (this dep also exists in our
         # C++ versions)
         self._defn = defn
+
+        # type information
+        self._featuretypes = tuple(
+            m.py_desc()._model_module for m in defn._models)
+        self._nomask = tuple(
+                False for _ in xrange(len(self._featuretypes)))
+        self._y_dtype = self._mk_y_dtype()
+
         if not (('data' in kwargs) ^ ('bytes' in kwargs)):
             raise ValueError("need exaclty one of `data' or `bytes'")
 
@@ -85,10 +96,9 @@ class state(object):
                 feature_hps = [m.default_params() for m in defn._models]
 
             data = kwargs['data']
-            self._groups = FixedNGroupManager(data.size())
-            self._alpha = float(cluster_hp['alpha'])
-            self._featuretypes = tuple(
-                m.py_desc()._model_module for m in defn._models)
+            self._groups = GroupManager(data.size())
+            self._groups.set_hp(cluster_hp)
+
             def init_shared(args):
                 typ, hp = args
                 s = typ.Shared()
@@ -96,9 +106,6 @@ class state(object):
                 return s
             self._featureshares = map(
                     init_shared, zip(self._featuretypes, feature_hps))
-            self._nomask = tuple(
-                    False for _ in xrange(len(self._featuretypes)))
-            self._y_dtype = self._mk_y_dtype()
 
             if 'assignment' in kwargs:
                 assignment = kwargs['assignment']
@@ -116,7 +123,49 @@ class state(object):
             for i, yi in data.view(shuffle=False):
                 self.add_value(assignment[i], i, yi)
         else:
-            raise RuntimeError("deserialize case unimplemented")
+            m = MixtureModelStateMessage()
+            m.ParseFromString(kwargs['bytes'])
+
+            if len(m.hypers) != len(defn._models):
+                raise ValueError("model # mismatch")
+            self._featureshares = []
+            for raw, model in zip(m.hypers, defn._models):
+                ps = model.py_desc()._pb_type.Shared()
+                ps.ParseFromString(raw)
+                s = model.py_desc()._model_module.Shared()
+                s.load_protobuf(ps)
+                self._featureshares.append(s)
+
+            def group_deserialize(raw):
+                m = MixtureModelGroupMessage()
+                m.ParseFromString(raw)
+                if len(m.suffstats) != len(defn._models):
+                    raise ValueError("suffstat len mismatch")
+                gdata = []
+                for raw, model in zip(m.suffstats, defn._models):
+                    pg = model.py_desc()._pb_type.Group()
+                    pg.ParseFromString(raw)
+                    g = model.py_desc()._model_module.Group()
+                    g.load_protobuf(pg)
+                    gdata.append(g)
+                return gdata
+            self._groups = GroupManager.deserialize(m.groups, group_deserialize)
+
+    def serialize(self):
+        m = MixtureModelStateMessage()
+        for s, model in zip(self._featureshares, self._defn._models):
+            pb = model.py_desc()._pb_type.Shared()
+            s.dump_protobuf(pb)
+            m.hypers.append(pb.SerializeToString())
+        def group_serialize(gdata):
+            m = MixtureModelGroupMessage()
+            for g, model in zip(gdata, self._defn._models):
+                pg = model.py_desc()._pb_type.Group()
+                g.dump_protobuf(pg)
+                m.suffstats.append(pg.SerializeToString())
+            return m.SerializeToString()
+        m.groups = self._groups.serialize(group_serialize)
+        return m.SerializeToString()
 
     def _mk_y_dtype(self):
         models = self._defn._models
@@ -131,10 +180,10 @@ class state(object):
         return self._y_dtype
 
     def get_cluster_hp(self):
-        return {'alpha':self._alpha}
+        return self._groups.get_hp()
 
     def set_cluster_hp(self, raw):
-        self._alpha = float(raw['alpha'])
+        self._groups.set_hp(raw)
 
     def get_feature_hp(self, fi):
         return self._featureshares[fi].dump()
@@ -219,16 +268,19 @@ class state(object):
         idmap = [0]*self._groups.ngroups()
         n_empty_groups = len(self.empty_groups())
         assert n_empty_groups > 0
-        empty_group_alpha = self._alpha / n_empty_groups # all empty groups share the alpha equally
+        # all empty groups share the alpha equally
+        empty_group_alpha = self._groups.alpha() / n_empty_groups
         mask = self._mask(y)
         nentities = 0
         for idx, (gid, (cnt, gdata)) in enumerate(self._groups.groupiter()):
             lg_term1 = np.log(empty_group_alpha if not cnt else cnt)
             nentities += cnt
-            lg_term2 = sum(0. if mi else g.score_value(s, yi) for (g, s), (yi, mi) in zip(zip(gdata, self._featureshares), zip(y, mask)))
+            lg_term2 = sum(0. if mi else g.score_value(s, yi) \
+                for (g, s), (yi, mi) in \
+                    zip(zip(gdata, self._featureshares), zip(y, mask)))
             scores[idx] = lg_term1 + lg_term2
             idmap[idx] = gid
-        scores -= np.log(nentities + self._alpha)
+        scores -= np.log(nentities + self._groups.alpha())
         return idmap, scores
 
     def score_data(self, features, groups, rng=None):
@@ -293,20 +345,7 @@ class state(object):
         """
         computes log p(C)
         """
-        # CRP
-        lg_sum = 0.0
-        assignments = self._groups.assignments()
-        counts = { assignments[0] : 1 }
-        for i, ci in enumerate(assignments):
-            if i == 0:
-                continue
-            assert ci != -1
-            cnt = counts.get(ci, 0)
-            numer = cnt if cnt else self._alpha
-            denom = i + self._alpha
-            lg_sum += np.log(numer / denom)
-            counts[ci] = cnt + 1
-        return lg_sum
+        return self._groups.score_assignment()
 
     def score_joint(self):
         """

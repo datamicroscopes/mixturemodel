@@ -11,9 +11,11 @@ from microscopes.mixture.definition import model_definition
 from microscopes.cxx.common.rng import rng
 
 from microscopes.py.mixture.model import \
-    initialize as py_initialize
+    initialize as py_initialize, \
+    deserialize as py_deserialize
 from microscopes.cxx.mixture.model import \
-    initialize as cxx_initialize
+    initialize as cxx_initialize, \
+    deserialize as cxx_deserialize
 
 from microscopes.py.common.recarray.dataview import \
     numpy_dataview as py_numpy_dataview
@@ -207,6 +209,47 @@ def test_masked_operations():
         cxx_s.dcheck_consistency()
 
     assert_suff_stats_equal(py_s, cxx_s, features=range(3), groups=range(3))
+
+def _test_serializer(initialize_fn, deserialize_fn, dataview):
+    N = 10
+    R = rng()
+
+    dtype = [('',bool), ('',int), ('',float)]
+    def randombool():
+        return np.random.choice([False, True])
+    def mkrow():
+        return (randombool(), np.random.randint(1, 10), np.random.random())
+    def mkmask():
+        return (randombool(), randombool(), randombool())
+    data = [mkrow() for _ in xrange(N)]
+    data = np.array(data, dtype=dtype)
+
+    defn = model_definition([bb, bnb, nich])
+    init_args = {
+        'defn' : defn,
+        'data' : dataview(data),
+        'cluster_hp' : {'alpha':10.0},
+        'feature_hps': [
+            dist_bb.EXAMPLES[0]['shared'],
+            dist_bnb.EXAMPLES[0]['shared'],
+            dist_nich.EXAMPLES[0]['shared'],
+        ],
+        'r' : R,
+    }
+    state = initialize_fn(**init_args)
+
+    raw = state.serialize()
+
+    state1 = deserialize_fn(defn, raw)
+
+
+@attr('wip')
+def test_serializer_py():
+    _test_serializer(py_initialize, py_deserialize, py_numpy_dataview)
+
+@attr('wip')
+def test_serializer_cxx():
+    _test_serializer(cxx_initialize, cxx_deserialize, cxx_numpy_dataview)
 
 def test_sample_post_pred():
     N = 10

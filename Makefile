@@ -12,7 +12,6 @@ debug:
 
 .PHONY: test
 test:
-	(cd build && make test)
 	(cd test && nosetests --verbose)
 
 .PHONY: travis_before_install

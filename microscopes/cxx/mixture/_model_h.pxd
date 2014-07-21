@@ -60,6 +60,8 @@ cdef extern from "microscopes/mixture/model.hpp" namespace "microscopes::mixture
         # for debugging purposes
         void dcheck_consistency() except +
 
+        string serialize() except +
+
     cdef cppclass state:
         hyperparam_bag_t get_cluster_hp() except +
         void set_cluster_hp(const hyperparam_bag_t &) except +
@@ -92,6 +94,8 @@ cdef extern from "microscopes/mixture/model.hpp" namespace "microscopes::mixture
 
         # for debugging purposes
         void dcheck_consistency() except +
+
+        string serialize() except +
 
     cdef cppclass fixed_model:
         fixed_model(const shared_ptr[fixed_state] &,

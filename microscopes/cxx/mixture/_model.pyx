@@ -262,6 +262,9 @@ cdef class fixed_state:
     def dcheck_consistency(self):
         self._thisptr.get().dcheck_consistency()
 
+    def serialize(self):
+        return self._thisptr.get().serialize()
+
 cdef class state:
     def __cinit__(self, model_definition defn, **kwargs):
         self._defn = defn
@@ -488,6 +491,9 @@ cdef class state:
 
     def dcheck_consistency(self):
         self._thisptr.get().dcheck_consistency()
+
+    def serialize(self):
+        return self._thisptr.get().serialize()
 
 def bind_fixed(fixed_state s, abstract_dataview data):
     cdef shared_ptr[c_fixed_entity_based_state_object] px
