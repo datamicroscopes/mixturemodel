@@ -27,7 +27,7 @@ namespace detail {
 
 typedef std::vector<std::shared_ptr<models::group>> group_type;
 
-static common::serialized_t
+static inline common::serialized_t
 group_type_to_string(const group_type &groups)
 {
   io::MixtureModelGroup m;
@@ -36,7 +36,7 @@ group_type_to_string(const group_type &groups)
   return common::util::protobuf_to_string(m);
 }
 
-static group_type
+static inline group_type
 group_type_from_string(
     const common::serialized_t &s,
     const std::vector<std::shared_ptr<models::hypers>> &models)
