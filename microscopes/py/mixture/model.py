@@ -8,15 +8,30 @@ from microscopes.io.schema_pb2 import \
     MixtureModelGroup as MixtureModelGroupMessage
 from distributions.dbg.random import sample_discrete_log, sample_discrete
 
-def sample(n, s, r=None):
+def sample(n, defn, cluster_hp=None, feature_hps=None, r=None):
     """
-    sample n iid values from the generative process described by s
+    sample n iid values from the generative process described by defn
     """
+    if n <= 0:
+        raise ValueError("need to sample positive #")
+    dtypes = [m.py_desc().get_np_dtype() for m in defn._models]
+    dtypes = np.dtype([('', dtype) for dtype in dtypes])
     cluster_counts = np.array([1], dtype=np.int)
-    featuretypes = s.get_feature_types()
+    featuretypes = tuple(m.py_desc()._model_module for m in defn._models)
     featureshares = [t.Shared() for t in featuretypes]
-    for i in xrange(len(featuretypes)):
-        featureshares[i].load(s.get_feature_hp(i))
+    # init with defaults
+    for share, m in zip(featureshares, defn._models):
+        share.load(m.default_params())
+    alpha = 1.0
+    if cluster_hp is not None:
+        alpha = float(cluster_hp['alpha'])
+    if alpha <= 0.0:
+        raise ValueError("alpha needs to be a positive real")
+    if feature_hps is not None:
+        if len(feature_hps) != len(defn._models):
+            raise ValueError("invalid # of feature hps")
+        for share, hp in zip(featureshares, feature_hps):
+            share.load(hp)
     def init_sampler(arg):
         typ, s = arg
         samp = typ.Sampler()
@@ -27,7 +42,6 @@ def sample(n, s, r=None):
     def new_sample(params):
         data = tuple(samp.eval(s) for samp, s in zip(params, featureshares))
         return data
-    alpha = s.get_cluster_hp()['alpha']
     cluster_params = [new_cluster_params()]
     samples = [[new_sample(cluster_params[-1])]]
     for _ in xrange(1, n):
@@ -41,21 +55,8 @@ def sample(n, s, r=None):
             cluster_counts[choice] += 1
             params = cluster_params[choice]
             samples[choice].append(new_sample(params))
-    return tuple(np.array(ys, dtype=s.get_feature_dtypes()) for ys in samples), \
+    return tuple(np.array(ys, dtype=dtypes) for ys in samples), \
            tuple(cluster_params)
-
-def fill(s, clusters, r=None):
-    assert not s.ngroups()
-    assert (np.array(s.assignments(), dtype=np.int)==-1).all()
-    counts = [c.shape[0] for c in clusters]
-    cumcounts = np.cumsum(counts)
-    gids = [s.create_group(r) for _ in xrange(len(clusters))]
-    for cid, (gid, data) in enumerate(zip(gids, clusters)):
-        off = cumcounts[cid-1] if cid else 0
-        for ei, yi in enumerate(data):
-            s.add_value(gid, off + ei, yi, r)
-    assert not (np.array(s.assignments(), dtype=np.int)==-1).any()
-    return s
 
 class state(object):
     """
