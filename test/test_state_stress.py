@@ -1,27 +1,27 @@
-from distributions.dbg.models import bb as py_bb
-from microscopes.py.mixture.model import state as py_state
-
-from microscopes.cxx.models import bb as cxx_bb
-from microscopes.cxx.mixture.model import state as cxx_state
+from microscopes.models import bb
+from microscopes.mixture.definition import model_definition
+from microscopes.py.mixture.model import initialize as py_initialize
+from microscopes.cxx.mixture.model import initialize as cxx_initialize
 from microscopes.cxx.common.rng import rng
+from microscopes.py.common.recarray.dataview import numpy_dataview as py_numpy_dataview
+from microscopes.cxx.common.recarray.dataview import numpy_dataview as cxx_numpy_dataview
 
 import numpy as np
-import math
 
 from nose.plugins.attrib import attr
 
-def _test_stress(ctor, bbmodel, R):
+def _test_stress(initialize_fn, dataview, R):
     N = 20
+    D = 2
+    data = np.random.random(size=(N, D)) < 0.8
+    Y = np.array([tuple(y) for y in data], dtype=[('',bool)]*D)
+    view = dataview(Y)
+    defn = model_definition([bb]*D)
 
-    s = ctor(N, [bbmodel])
-    s.set_cluster_hp({'alpha':2.0})
-    s.set_feature_hp(0, {'alpha':1., 'beta':1.})
-    s.create_group(R)
+    s = initialize_fn(defn, view, cluster_hp={'alpha':2.0}, r=R)
 
     CHANGE_GROUP = 1
     CHANGE_VALUE = 2
-
-    y_value = np.array([(True,)], dtype=[('',bool)])[0]
 
     nops = 100
     while nops:
@@ -39,69 +39,14 @@ def _test_stress(ctor, bbmodel, R):
             if s.assignments()[eid] == -1:
                 # add to random group
                 egid = np.random.choice(s.groups())
-                s.add_value(egid, eid, y_value, R)
+                s.add_value(egid, eid, Y[eid], R)
             else:
-                s.remove_value(eid, y_value, R)
+                s.remove_value(eid, Y[eid], R)
         s.dcheck_consistency()
         nops -= 1
 
 def test_stress_py():
-    _test_stress(py_state, py_bb, None)
+    _test_stress(py_initialize, py_numpy_dataview, None)
 
 def test_stress_cxx():
-    _test_stress(cxx_state, cxx_bb, rng())
-
-def _test_stress_sampler(ctor, bbmodel, R):
-    """
-    tries to mimic the low level operations of a gibbs sampler
-    """
-
-    from sklearn.datasets import fetch_mldata
-    mnist_dataset = fetch_mldata('MNIST original')
-
-    Y_2 = mnist_dataset['data'][np.where(mnist_dataset['target'] == 2.)[0]]
-    Y_3 = mnist_dataset['data'][np.where(mnist_dataset['target'] == 3.)[0]]
-    _, D = Y_2.shape
-    W = int(math.sqrt(D))
-    assert W * W == D
-    dtype = [('', bool)]*D
-    Y = np.vstack([Y_2, Y_3])
-    Y = np.array([tuple(y) for y in Y], dtype=dtype)
-
-    N = Y.shape[0]
-
-    s = ctor(N, [bbmodel]*D)
-    s.set_cluster_hp({'alpha':2.0})
-    s.set_feature_hp(0, {'alpha':1., 'beta':1.})
-
-    for _ in xrange(np.random.randint(5) + 1):
-        s.create_group(R)
-    groups = s.groups()
-    for i, y in enumerate(Y):
-        s.add_value(np.random.choice(groups), i, y, R)
-
-    egroups = s.empty_groups()
-    for egid in egroups[1:]:
-        s.delete_group(egid)
-    if not egroups:
-        s.create_group(R)
-    assert len(s.empty_groups()) == 1
-
-    for i in np.random.permutation(Y.shape[0])[:100]:
-        egroups = s.empty_groups()
-        assert len(egroups) == 1
-        y = Y[i]
-        egid = s.remove_value(i, y, R)
-        if not s.groupsize(egid):
-            s.delete_group(egid)
-        choice = np.random.choice(s.groups())
-        s.add_value(choice, i, y, R)
-        if choice == egroups[0]:
-            assert s.groupsize(egroups[0]) == 1
-            assert not s.empty_groups()
-            s.create_group(R)
-        s.dcheck_consistency()
-
-@attr('slow')
-def test_stress_sampler_cxx():
-    _test_stress_sampler(cxx_state, cxx_bb, rng())
+    _test_stress(cxx_initialize, cxx_numpy_dataview, rng())
