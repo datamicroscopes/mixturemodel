@@ -100,7 +100,15 @@ class state(object):
                     False for _ in xrange(len(self._featuretypes)))
             self._y_dtype = self._mk_y_dtype()
 
-            assignment = random_assignment_vector(data.size())
+            if 'assignment' in kwargs:
+                assignment = kwargs['assignment']
+                if len(assignment) != data.size():
+                    raise ValueError("invalid assignment vector length")
+                for s in assignment:
+                    if s < 0:
+                        raise ValueError("non-negative labels only")
+            else:
+                assignment = random_assignment_vector(data.size())
             ngroups = max(assignment) + 1
             for _ in xrange(ngroups):
                 self.create_group()

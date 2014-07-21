@@ -381,7 +381,8 @@ public:
 
   static std::shared_ptr<fixed_state>
   unsafe_initialize(const fixed_model_definition &def,
-                    size_t n, common::rng_t &rng)
+                    size_t n,
+                    common::rng_t &rng)
   {
     std::shared_ptr<fixed_state> s = std::make_shared<fixed_state>(
         def.create_hypers(),
@@ -398,11 +399,15 @@ public:
 
   /**
    * randomly initializes to a valid point in the state space
+   *
+   * if the assignment vector passed in is empty, generates a random one;
+   * otherwise, uses the assignment vector
    */
   static std::shared_ptr<fixed_state>
   initialize(const fixed_model_definition &def,
              const common::hyperparam_bag_t &cluster_init,
              const std::vector<common::hyperparam_bag_t> &feature_inits,
+             const std::vector<size_t> &assignments,
              common::recarray::dataview &data,
              common::rng_t &rng)
   {
@@ -412,8 +417,18 @@ public:
     p->set_cluster_hp(cluster_init);
     for (size_t i = 0; i < feature_inits.size(); i++)
       p->set_feature_hp(i, feature_inits[i]);
-    const auto assign =
-      common::util::random_assignment_vector(data.size(), rng);
+    std::vector<size_t> assign;
+    if (assignments.empty())
+      assign = common::util::random_assignment_vector(data.size(), rng);
+    else {
+      MICROSCOPES_DCHECK(assignments.size() == data.size(),
+        "invalid length assignment vector");
+      const size_t max_elem =
+        *std::max_element(assignments.begin(), assignments.end());
+      MICROSCOPES_DCHECK(max_elem < def.groups(),
+        "invalid assignment vector");
+      assign = assignments;
+    }
     data.reset();
     for (size_t i = 0; i < assign.size(); i++, data.next())
       p->add_value(assign[i], data, rng);
@@ -527,6 +542,7 @@ public:
   initialize(const model_definition &def,
              const common::hyperparam_bag_t &cluster_init,
              const std::vector<common::hyperparam_bag_t> &feature_inits,
+             const std::vector<size_t> &assignments,
              common::recarray::dataview &data,
              common::rng_t &rng)
   {
@@ -536,8 +552,14 @@ public:
     p->set_cluster_hp(cluster_init);
     for (size_t i = 0; i < feature_inits.size(); i++)
       p->set_feature_hp(i, feature_inits[i]);
-    const auto assign =
-      common::util::random_assignment_vector(data.size(), rng);
+    std::vector<size_t> assign;
+    if (assignments.empty())
+      assign = common::util::random_assignment_vector(data.size(), rng);
+    else {
+      MICROSCOPES_DCHECK(assignments.size() == data.size(),
+        "invalid length assignment vector");
+      assign = assignments;
+    }
     const size_t ngroups = *std::max_element(assign.begin(), assign.end()) + 1;
     for (size_t i = 0; i < ngroups; i++)
       p->create_group(rng);

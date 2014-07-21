@@ -50,6 +50,7 @@ cdef class fixed_state:
     def __cinit__(self, fixed_model_definition defn, **kwargs):
         self._defn = defn
         cdef vector[hyperparam_bag_t] c_feature_hps_bytes
+        cdef vector[size_t] c_assignment
 
         # note: python cannot overload __cinit__(), so we 
         # use kwargs to handle both the random initialization case and
@@ -97,10 +98,18 @@ cdef class fixed_state:
             for s in feature_hps_bytes:
                 c_feature_hps_bytes.push_back(s)
 
+            if 'assignment' in kwargs: 
+                assignment = kwargs['assignment']
+                for s in assignment:
+                    if s < 0:
+                        raise ValueError('bad assignment given')
+                    c_assignment.push_back(s)
+
             self._thisptr = c_initialize_fixed(
                 defn._thisptr.get()[0],
                 cluster_hp_bytes,
                 c_feature_hps_bytes,
+                c_assignment,
                 (<abstract_dataview>data)._thisptr.get()[0],
                 (<rng>r)._thisptr[0])
         else:
@@ -257,6 +266,7 @@ cdef class state:
     def __cinit__(self, model_definition defn, **kwargs):
         self._defn = defn
         cdef vector[hyperparam_bag_t] c_feature_hps_bytes
+        cdef vector[size_t] c_assignment
 
         # note: python cannot overload __cinit__(), so we 
         # use kwargs to handle both the random initialization case and
@@ -303,10 +313,18 @@ cdef class state:
             for s in feature_hps_bytes:
                 c_feature_hps_bytes.push_back(s)
 
+            if 'assignment' in kwargs: 
+                assignment = kwargs['assignment']
+                for s in assignment:
+                    if s < 0:
+                        raise ValueError('bad assignment given')
+                    c_assignment.push_back(s)
+
             self._thisptr = c_initialize(
                 defn._thisptr.get()[0],
                 cluster_hp_bytes,
                 c_feature_hps_bytes,
+                c_assignment,
                 (<abstract_dataview>data)._thisptr.get()[0],
                 (<rng>r)._thisptr[0])
         else:
