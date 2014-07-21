@@ -1,6 +1,19 @@
-all:
-	@echo "Setting up cmake"
-	[ -d build ] || (mkdir build && cd build && eval `python ../cmake/print_cmake_command.py`)
+all: release
+
+.PHONY: release
+release:
+	@echo "Setting up cmake (release)"
+	[ -d release ] || (mkdir release && cd release && eval `python ../cmake/print_cmake_command.py`)
+
+.PHONY: debug
+debug:
+	@echo "Setting up cmake (debug)"
+	[ -d debug ] || (mkdir debug && cd debug && eval `python ../cmake/print_cmake_command.py --debug`)
+
+.PHONY: test
+test:
+	(cd build && make test)
+	(cd test && nosetests --verbose)
 
 .PHONY: travis_before_install
 travis_before_install:

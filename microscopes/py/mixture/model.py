@@ -378,10 +378,8 @@ class model(object):
     def delete_group(self, gid):
         self._impl.delete_group(gid)
 
-def initialize(defn, cluster_hp, feature_hps, data, r=None):
-    return state(defn=defn, cluster_hp=cluster_hp,
-                 feature_hps=feature_hps, data=data,
-                 r=r)
+def initialize(defn, data, **kwargs):
+    return state(defn=defn, data=data, **kwargs)
 
 def deserialize(defn, bytes):
     return state(defn=defn, bytes=bytes)

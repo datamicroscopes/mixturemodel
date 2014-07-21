@@ -92,7 +92,7 @@ cdef class fixed_state:
                 feature_hps = [m._default_params for m in defn._models] 
 
             feature_hps_bytes = [
-                m.shared_dict_to_bytes(hp) \
+                m.py_desc().shared_dict_to_bytes(hp) \
                     for hp, m in zip(feature_hps, defn._models)]
             for s in feature_hps_bytes:
                 c_feature_hps_bytes.push_back(s)
@@ -487,23 +487,17 @@ def bind(state s, abstract_dataview data):
     ret.set_entity(px)
     return ret
 
-def initialize_fixed(fixed_model_definition defn,
-                     cluster_hp,
-                     feature_hps,
-                     abstract_dataview data,
-                     rng r):
-    return fixed_state(defn=defn, cluster_hp=cluster_hp,
-                       feature_hps=feature_hps, data=data,
-                       r=r)
+def initialize_fixed(fixed_model_definition defn, 
+                     abstract_dataview data, 
+                     rng r, 
+                     **kwargs):
+    return fixed_state(defn=defn, data=data, r=r, **kwargs)
 
 def initialize(model_definition defn,
-               cluster_hp,
-               feature_hps,
                abstract_dataview data,
-               rng r):
-    return state(defn=defn, cluster_hp=cluster_hp,
-                 feature_hps=feature_hps, data=data, 
-                 r=r)
+               rng r,
+               **kwargs):
+    return state(defn=defn, data=data, r=r, **kwargs)
 
 def deserialize_fixed(fixed_model_definition defn, bytes):
     return fixed_state(defn=defn, bytes=bytes)

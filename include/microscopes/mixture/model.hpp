@@ -161,6 +161,12 @@ public:
   {
     auto &g = groups_.add_value(gid, eid);
     acc.reset();
+    if (acc.nfeatures() != g.size()) {
+      std::cout << "add_value(gid=" << gid << ", eid=" << eid << ")" << std::endl;
+      std::cout << "  acc.nfeatures(): " << acc.nfeatures() << std::endl;
+      std::cout << "  g.size(): " << g.size() << std::endl;
+
+    }
     MICROSCOPES_ASSERT(acc.nfeatures() == g.size());
     for (size_t i = 0; i < acc.nfeatures(); i++, acc.bump()) {
       // XXX: currently, multi-dimensional features are all or nothing; if any of
@@ -383,12 +389,19 @@ public:
   {}
 
   static std::shared_ptr<fixed_state>
-  unsafe_initialize(const fixed_model_definition &def, size_t n)
+  unsafe_initialize(const fixed_model_definition &def,
+                    size_t n, common::rng_t &rng)
   {
     std::shared_ptr<fixed_state> s = std::make_shared<fixed_state>(
         def.create_hypers(),
         common::fixed_group_manager<detail::group_type>(
           n, def.groups()));
+    for (size_t i = 0; i < s->hypers_.size(); i++) {
+      auto &gdata = s->groups_.group(i).data_;
+      gdata.reserve(s->hypers_.size());
+      for (auto &m : s->hypers_)
+        gdata.emplace_back(m->create_group(rng));
+    }
     return s;
   }
 
@@ -402,7 +415,7 @@ public:
              common::recarray::dataview &data,
              common::rng_t &rng)
   {
-    auto p = unsafe_initialize(def, data.size());
+    auto p = unsafe_initialize(def, data.size(), rng);
     MICROSCOPES_DCHECK(def.models().size() == feature_inits.size(),
         "init size mismatch");
     p->set_cluster_hp(cluster_init);

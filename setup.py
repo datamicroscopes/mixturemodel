@@ -82,7 +82,7 @@ if LooseVersion(cython_version) < LooseVersion(min_cython_version):
 
 cc = os.environ.get('CC', None)
 cxx = os.environ.get('CXX', None)
-debug_build = False
+debug_build = 'DEBUG' in os.environ
 
 distributions_lib, distributions_inc = find_dependency(
     'libdistributions_shared.{}'.format(so_ext), 'distributions')
