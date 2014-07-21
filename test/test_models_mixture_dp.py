@@ -1,9 +1,15 @@
-from distributions.dbg.models import bb as py_bb
-from microscopes.py.mixture.model import state as py_state, fill as py_fill, sample as py_sample
-from microscopes.cxx.models import bb as cxx_bb
+from microscopes.models import bb
+from microscopes.mixture.definition import model_definition
 from microscopes.cxx.common.rng import rng
-from microscopes.cxx.mixture.model import state as cxx_state
 from microscopes.py.common.util import KL_discrete, logsumexp
+
+from microscopes.py.common.recarray.dataview import \
+    numpy_dataview as py_numpy_dataview
+from microscopes.cxx.common.recarray.dataview import \
+    numpy_dataview as cxx_numpy_dataview
+
+from microscopes.py.mixture.model import initialize as py_initialize
+from microscopes.cxx.mixture.model import initialize as cxx_initialize
 
 import numpy as np
 import numpy.ma as ma
@@ -14,23 +20,18 @@ from nose.tools import assert_almost_equals
 
 N, D = 1000, 5
 
-def _test_sample_post_pred(ctor, bbtype, y_new, r):
-    alpha = 2.0
-    s = ctor(N, [bbtype]*D)
-    s.set_cluster_hp({'alpha':alpha})
-    for i in xrange(D):
-        s.set_feature_hp(i, {'alpha':1.,'beta':1.})
+def _test_sample_post_pred(initialize_fn, dataview, y_new, r):
+    defn = model_definition([bb]*D)
 
-    py_proto = py_state(N, [py_bb]*D)
-    py_proto.set_cluster_hp(s.get_cluster_hp())
-    for i in xrange(D):
-        py_proto.set_feature_hp(i, s.get_feature_hp(i))
+    data = [tuple(row) for row in (np.random.random(size=(N, D)) < 0.8)]
+    data = np.array(data, dtype=[('',bool)]*D)
 
-    Y_clustered, _ = py_sample(N, py_proto)
-    Y = np.hstack(Y_clustered)
-    assert Y.shape[0] == N
-
-    py_fill(s, Y_clustered, r)
+    s = initialize_fn(
+        defn=defn,
+        data=dataview(data),
+        cluster_hp={'alpha':2.},
+        feature_hps=[{'alpha':1.,'beta':1.}]*D,
+        r=r)
 
     n_samples = 10000
     Y_samples = [s.sample_post_pred(None, r)[1] for _ in xrange(n_samples)]
@@ -72,22 +73,23 @@ def _test_sample_post_pred(ctor, bbtype, y_new, r):
 
     assert kldiv <= 0.005
 
+
 def test_py_sample_post_pred_no_given_data():
-    _test_sample_post_pred(py_state, py_bb, None, None)
+    _test_sample_post_pred(py_initialize, py_numpy_dataview, None, None)
 
 def test_py_sample_post_pred_given_data():
     assert D == 5
     y_new = ma.masked_array(
         np.array([(True, False, True, True, True)], dtype=[('', np.bool)]*5),
         mask=[(False, False, True, True, True)])[0]
-    _test_sample_post_pred(py_state, py_bb, y_new, None)
+    _test_sample_post_pred(py_initialize, py_numpy_dataview, y_new, None)
 
 def test_cxx_sample_post_pred_no_given_data():
-    _test_sample_post_pred(cxx_state, cxx_bb, None, rng(7589))
+    _test_sample_post_pred(cxx_initialize, cxx_numpy_dataview, None, rng(7589))
 
 def test_cxx_sample_post_pred_given_data():
     assert D == 5
     y_new = ma.masked_array(
         np.array([(True, False, True, True, True)], dtype=[('', np.bool)]*5),
         mask=[(False, False, True, True, True)])[0]
-    _test_sample_post_pred(cxx_state, cxx_bb, None, rng(543234))
+    _test_sample_post_pred(cxx_initialize, cxx_numpy_dataview, None, rng(543234))

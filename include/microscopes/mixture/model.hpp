@@ -161,12 +161,6 @@ public:
   {
     auto &g = groups_.add_value(gid, eid);
     acc.reset();
-    if (acc.nfeatures() != g.size()) {
-      std::cout << "add_value(gid=" << gid << ", eid=" << eid << ")" << std::endl;
-      std::cout << "  acc.nfeatures(): " << acc.nfeatures() << std::endl;
-      std::cout << "  g.size(): " << g.size() << std::endl;
-
-    }
     MICROSCOPES_ASSERT(acc.nfeatures() == g.size());
     for (size_t i = 0; i < acc.nfeatures(); i++, acc.bump()) {
       // XXX: currently, multi-dimensional features are all or nothing; if any of
@@ -320,10 +314,7 @@ class model_definition {
 public:
   model_definition(
       const std::vector<std::shared_ptr<models::model>> &models)
-    : models_(models)
-  {
-    std::cout << "models_.size(): " << models_.size() << std::endl;
-  }
+    : models_(models) {}
 
   std::vector<common::runtime_type>
   get_runtime_types() const

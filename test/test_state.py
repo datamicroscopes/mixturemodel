@@ -208,7 +208,6 @@ def test_masked_operations():
 
     assert_suff_stats_equal(py_s, cxx_s, features=range(3), groups=range(3))
 
-@attr('wip')
 def test_sample_post_pred():
     N = 10
     R = rng(5483932)
