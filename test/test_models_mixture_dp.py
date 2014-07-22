@@ -21,7 +21,7 @@ from nose.tools import assert_almost_equals
 N, D = 1000, 5
 
 def _test_sample_post_pred(initialize_fn, dataview, y_new, r):
-    defn = model_definition([bb]*D)
+    defn = model_definition(N, [bb]*D)
 
     data = [tuple(row) for row in (np.random.random(size=(N, D)) < 0.8)]
     data = np.array(data, dtype=[('',bool)]*D)

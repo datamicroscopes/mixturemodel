@@ -72,7 +72,7 @@ def test_operations():
     data = [mkrow() for _ in xrange(N)]
     data = np.array(data, dtype=dtype)
 
-    defn = model_definition([bb, bb, nich, bb])
+    defn = model_definition(N, [bb, bb, nich, bb])
     init_args = {
         'defn' : defn,
         'cluster_hp' : {'alpha':2.0},
@@ -173,7 +173,7 @@ def test_masked_operations():
     mask = [mkmask() for _ in xrange(N)]
     data = ma.masked_array(data, mask=mask)
 
-    defn = model_definition([bb, bnb, nich])
+    defn = model_definition(N, [bb, bnb, nich])
     init_args = {
         'defn' : defn,
         'cluster_hp' : {'alpha':10.0},
@@ -224,7 +224,7 @@ def _test_serializer(initialize_fn, deserialize_fn, dataview):
     data = [mkrow() for _ in xrange(N)]
     data = np.array(data, dtype=dtype)
 
-    defn = model_definition([bb, bnb, nich])
+    defn = model_definition(N, [bb, bnb, nich])
     init_args = {
         'defn' : defn,
         'data' : dataview(data),
@@ -264,7 +264,7 @@ def test_sample_post_pred():
     data = [mkrow() for _ in xrange(N)]
     data = np.array(data, dtype=dtype)
 
-    defn = model_definition([bb]*D)
+    defn = model_definition(N, [bb]*D)
     init_args = {
         'defn' : defn,
         'cluster_hp' : {'alpha':2.0},

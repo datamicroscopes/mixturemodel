@@ -12,17 +12,17 @@ def _validate(models):
             raise ValueError("invalid model given: {}".format(repr(m)))
 
 cdef class fixed_model_definition:
-    def __cinit__(self, int groups, models):
+    def __cinit__(self, int n, int groups, models):
         _validate(models)
         self._thisptr.reset(
             new c_fixed_model_definition(groups, get_cmodels(models)))
-        assert self._thisptr.get().nmodels() == len(models)
+        self._n = n
         self._groups = groups
         self._models = list(models)
 
 cdef class model_definition:
-    def __cinit__(self, models):
+    def __cinit__(self, int n, models):
         _validate(models)
         self._thisptr.reset(new c_model_definition(get_cmodels(models)))
-        assert self._thisptr.get().nmodels() == len(models)
+        self._n = n
         self._models = list(models)

@@ -23,10 +23,10 @@ main(void)
     models.emplace_back(make_shared<
         models::distributions_model<BetaBernoulli>>());
 
-  mixture::model_definition def(models);
+  mixture::model_definition def(1000, models);
 
   shared_ptr<mixture::state> spx(
-      mixture::state::unsafe_initialize(def, 1000));
+      mixture::state::unsafe_initialize(def));
   auto s = *spx;
   s.get_cluster_hp_mutator("alpha").set<float>(2.0);
 

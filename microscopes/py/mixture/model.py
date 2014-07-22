@@ -8,12 +8,10 @@ from microscopes.io.schema_pb2 import \
     MixtureModelGroup as MixtureModelGroupMessage
 from distributions.dbg.random import sample_discrete_log, sample_discrete
 
-def sample(n, defn, cluster_hp=None, feature_hps=None, r=None):
+def sample(defn, cluster_hp=None, feature_hps=None, r=None):
     """
-    sample n iid values from the generative process described by defn
+    sample iid values from the generative process described by defn
     """
-    if n <= 0:
-        raise ValueError("need to sample positive #")
     dtypes = [m.py_desc().get_np_dtype() for m in defn._models]
     dtypes = np.dtype([('', dtype) for dtype in dtypes])
     cluster_counts = np.array([1], dtype=np.int)
@@ -44,7 +42,7 @@ def sample(n, defn, cluster_hp=None, feature_hps=None, r=None):
         return data
     cluster_params = [new_cluster_params()]
     samples = [[new_sample(cluster_params[-1])]]
-    for _ in xrange(1, n):
+    for _ in xrange(1, defn._n):
         dist = np.append(cluster_counts, alpha).astype(np.float, copy=False)
         choice = sample_discrete(dist)
         if choice == len(cluster_counts):

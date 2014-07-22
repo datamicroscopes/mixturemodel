@@ -52,7 +52,7 @@ def test_niw_compare_to_py():
     py_view, cxx_view = py_numpy_dataview(Y), cxx_numpy_dataview(Y)
 
     r = rng()
-    defn = model_definition([niw(3)])
+    defn = model_definition(Y.shape[0], [niw(3)])
     init_args = {
         'cluster_hp':{'alpha':1.},
         'feature_hps':[{'mu0':mu0,'lambda':lam,'psi':psi,'nu':nu}],

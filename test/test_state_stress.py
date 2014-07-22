@@ -16,7 +16,7 @@ def _test_stress(initialize_fn, dataview, R):
     data = np.random.random(size=(N, D)) < 0.8
     Y = np.array([tuple(y) for y in data], dtype=[('',bool)]*D)
     view = dataview(Y)
-    defn = model_definition([bb]*D)
+    defn = model_definition(N, [bb]*D)
 
     s = initialize_fn(defn, view, cluster_hp={'alpha':2.0}, r=R)
 

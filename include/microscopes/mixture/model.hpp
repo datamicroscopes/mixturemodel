@@ -313,8 +313,13 @@ extern template class state<common::group_manager>;
 class model_definition {
 public:
   model_definition(
+      size_t n,
       const std::vector<std::shared_ptr<models::model>> &models)
-    : models_(models) {}
+    : n_(n), models_(models)
+  {
+    MICROSCOPES_DCHECK(n > 0, "no entities given");
+    MICROSCOPES_DCHECK(models.size() > 0, "no features given");
+  }
 
   std::vector<common::runtime_type>
   get_runtime_types() const
@@ -336,6 +341,8 @@ public:
     return ret;
   }
 
+  inline size_t n() const { return n_; }
+
   inline const std::vector<std::shared_ptr<models::model>> &
   models() const
   {
@@ -349,6 +356,7 @@ public:
   }
 
 private:
+  size_t n_;
   std::vector<std::shared_ptr<models::model>> models_;
 };
 
@@ -357,9 +365,10 @@ private:
 class fixed_model_definition : public detail::model_definition {
 public:
   fixed_model_definition(
+      size_t n,
       size_t groups,
       const std::vector<std::shared_ptr<models::model>> &models)
-    : detail::model_definition(models), groups_(groups) {}
+    : detail::model_definition(n, models), groups_(groups) {}
   inline size_t groups() const { return groups_; }
 private:
   size_t groups_;
@@ -368,8 +377,9 @@ private:
 class model_definition : public detail::model_definition {
 public:
   model_definition(
+      size_t n,
       const std::vector<std::shared_ptr<models::model>> &models)
-    : detail::model_definition(models) {}
+    : detail::model_definition(n, models) {}
 };
 
 class fixed_state : public detail::state<common::fixed_group_manager> {
@@ -381,13 +391,12 @@ public:
 
   static std::shared_ptr<fixed_state>
   unsafe_initialize(const fixed_model_definition &def,
-                    size_t n,
                     common::rng_t &rng)
   {
     std::shared_ptr<fixed_state> s = std::make_shared<fixed_state>(
         def.create_hypers(),
         common::fixed_group_manager<detail::group_type>(
-          n, def.groups()));
+          def.n(), def.groups()));
     for (size_t i = 0; i < s->hypers_.size(); i++) {
       auto &gdata = s->groups_.group(i).data_;
       gdata.reserve(s->hypers_.size());
@@ -411,9 +420,11 @@ public:
              common::recarray::dataview &data,
              common::rng_t &rng)
   {
-    auto p = unsafe_initialize(def, data.size(), rng);
+    auto p = unsafe_initialize(def, rng);
     MICROSCOPES_DCHECK(def.models().size() == feature_inits.size(),
         "init size mismatch");
+    MICROSCOPES_DCHECK(def.n() == data.size(),
+        "data size mismatch");
     p->set_cluster_hp(cluster_init);
     for (size_t i = 0; i < feature_inits.size(); i++)
       p->set_feature_hp(i, feature_inits[i]);
@@ -528,11 +539,11 @@ public:
    * useful primarily for testing purposes
    */
   static std::shared_ptr<state>
-  unsafe_initialize(const model_definition &def, size_t n)
+  unsafe_initialize(const model_definition &def)
   {
     return std::make_shared<state>(
         def.create_hypers(),
-        common::group_manager<detail::group_type>(n));
+        common::group_manager<detail::group_type>(def.n()));
   }
 
   /**
@@ -548,7 +559,7 @@ public:
   {
     MICROSCOPES_DCHECK(def.models().size() == feature_inits.size(),
         "init size mismatch");
-    auto p = unsafe_initialize(def, data.size());
+    auto p = unsafe_initialize(def);
     p->set_cluster_hp(cluster_init);
     for (size_t i = 0; i < feature_inits.size(); i++)
       p->set_feature_hp(i, feature_inits[i]);

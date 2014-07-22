@@ -19,7 +19,7 @@ def assert_lists_almost_equals(a, b):
         assert_almost_equals(x, y, places=5)
 
 def test_get_set_params():
-    defn = model_definition([bb, bnb, gp, nich])
+    defn = model_definition(1, [bb, bnb, gp, nich])
     data = np.array([(True, 3, 5, 10.),], dtype=[('',bool),('',int),('',int),('',float)])
     s = initialize(defn=defn, data=numpy_dataview(data), r=rng())
     s.set_cluster_hp({'alpha':3.0})
@@ -35,7 +35,7 @@ def test_get_set_params():
         assert_dict_almost_equals(s.get_feature_hp(i), hp)
 
 def test_get_set_params_fixed():
-    defn = fixed_model_definition(5, [bb, bnb, gp, nich])
+    defn = fixed_model_definition(1, 5, [bb, bnb, gp, nich])
     data = np.array([(True, 3, 5, 10.),], dtype=[('',bool),('',int),('',int),('',float)])
     s = initialize_fixed(defn=defn, data=numpy_dataview(data), r=rng())
     s.set_cluster_hp({'alphas': np.array([0.1, 0.2, 0.3, 0.4, 0.5])})

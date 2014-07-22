@@ -2,10 +2,9 @@
 *.pyc
 .DS_Store
 /config.mk
-/microscopes/**/*.so
-/microscopes/**/*.cpp
 /build
-/out
+/debug
+/release
 *.d
 *.prog
 *.dSYM
