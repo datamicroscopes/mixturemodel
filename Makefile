@@ -30,5 +30,5 @@ travis_install:
 
 .PHONY: travis_script
 travis_script: 
-	(cd build && make test)
+	(cd build && CTEST_OUTPUT_ON_FAILURE=true make test)
 	(cd test && nosetests --verbose -a '!slow')
