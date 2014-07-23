@@ -122,10 +122,11 @@ extra_compile_args = [
 math_opt_flags = [
     '-mfpmath=sse',
     '-msse4.1',
-    '-ffast-math',
-    '-funsafe-math-optimizations',
+    #'-ffast-math',
+    #'-funsafe-math-optimizations',
 ]
-extra_compile_args.extend(math_opt_flags)
+if not debug_build:
+    extra_compile_args.extend(math_opt_flags)
 if clang:
     extra_compile_args.extend([
         '-mmacosx-version-min=10.7',  # for anaconda
