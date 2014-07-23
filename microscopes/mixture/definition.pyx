@@ -15,7 +15,7 @@ cdef class fixed_model_definition:
     def __cinit__(self, int n, int groups, models):
         _validate(models)
         self._thisptr.reset(
-            new c_fixed_model_definition(groups, get_cmodels(models)))
+            new c_fixed_model_definition(n, groups, get_cmodels(models)))
         self._n = n
         self._groups = groups
         self._models = list(models)
@@ -23,6 +23,6 @@ cdef class fixed_model_definition:
 cdef class model_definition:
     def __cinit__(self, int n, models):
         _validate(models)
-        self._thisptr.reset(new c_model_definition(get_cmodels(models)))
+        self._thisptr.reset(new c_model_definition(n, get_cmodels(models)))
         self._n = n
         self._models = list(models)
