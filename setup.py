@@ -3,7 +3,6 @@
 from distutils.core import setup
 from distutils.extension import Extension
 from distutils.version import LooseVersion
-from distutils.sysconfig import parse_makefile
 from Cython.Distutils import build_ext
 from Cython.Build import cythonize
 from cython import __version__ as cython_version
@@ -11,9 +10,22 @@ from cython import __version__ as cython_version
 import numpy
 import sys
 import os
-
-from subprocess import Popen, PIPE
 import json
+
+from subprocess import Popen, PIPE, check_call
+
+def get_git_sha1():
+    try:
+        from git import Repo
+    except ImportError:
+        print >>sys.stderr, "could not import gitpython"
+        return None
+    repo = Repo(os.path.dirname(__file__))
+    sha1 = repo.commits()[0].id
+    if repo.is_dirty:
+        return sha1 + "dirty"
+    else:
+        return sha1
 
 def find_dependency(soname, incname):
     def test(prefix):
@@ -91,6 +103,23 @@ microscopes_common_lib, microscopes_common_inc = find_dependency(
 microscopes_common_cython_inc = find_cython_dependency('microscopes')
 microscopes_mixturemodel_lib, microscopes_mixturemodel_inc = find_dependency(
     'libmicroscopes_mixturemodel.{}'.format(so_ext), 'microscopes')
+
+version = "0.1.0"
+if not 'OFFICIAL_BUILD' in os.environ:
+    sha1 = get_git_sha1()
+    if sha1 is None:
+        sha1 = 'unknown'
+    version = version + '.{}-{}'.format(sha1, 'debug' if debug_build else 'release')
+    print 'writing package version:', version
+    join = os.path.join
+    dirname = os.path.dirname
+    basedir = join(join(dirname(__file__), 'microscopes'), 'mixture')
+    pkgfile = join(basedir, '__init__.py')
+    print pkgfile
+    with open(pkgfile, 'w') as fp:
+        print >>fp, "__version__ = '{}'".format(version)
+elif debug_build:
+    raise RuntimeError("OFFICIAL_BUILD and DEBUG both set")
 
 if distributions_inc is not None:
     print 'Using distributions_inc:', distributions_inc
@@ -177,7 +206,7 @@ extensions = cythonize([
 ], include_path=[microscopes_common_cython_inc])
 
 setup(
-    version='0.1',
+    version=version,
     name='microscopes-mixturemodel',
     description='XYZ',
     long_description='XYZ long',
