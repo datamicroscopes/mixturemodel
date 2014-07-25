@@ -22,10 +22,7 @@ def get_git_sha1():
         return None
     repo = Repo(os.path.dirname(__file__))
     sha1 = repo.commits()[0].id
-    if repo.is_dirty:
-        return sha1 + "dirty"
-    else:
-        return sha1
+    return sha1
 
 def find_dependency(soname, incname):
     def test(prefix):
