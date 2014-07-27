@@ -147,21 +147,23 @@ public:
   inline size_t groupsize(size_t gid) const { return groups_.groupsize(gid); }
   inline std::vector<size_t> groups() const { return groups_.groups(); }
 
-  inline void
-  add_value(size_t gid, const common::recarray::dataview &view, common::rng_t &rng)
-  {
-    MICROSCOPES_DCHECK(view.size() == nentities(), "invalid view");
-    common::recarray::row_accessor acc = view.get();
-    const size_t eid = view.index();
-    add_value(gid, eid, acc, rng);
-  }
+  //inline void
+  //add_value(size_t gid, const common::recarray::dataview &view, common::rng_t &rng)
+  //{
+  //  MICROSCOPES_DCHECK(view.size() == nentities(), "invalid view");
+  //  common::recarray::row_accessor acc = view.get();
+  //  const size_t eid = view.index();
+  //  add_value(gid, eid, acc, rng);
+  //}
 
   inline void
-  add_value(size_t gid, size_t eid, common::recarray::row_accessor &acc, common::rng_t &rng)
+  add_value(size_t gid, size_t eid,
+      common::recarray::row_accessor &acc, common::rng_t &rng)
   {
     auto &g = groups_.add_value(gid, eid);
     acc.reset();
-    MICROSCOPES_ASSERT(acc.nfeatures() == g.size());
+    MICROSCOPES_DCHECK(acc.nfeatures() == g.size(),
+        "nfeatures mismatch");
     for (size_t i = 0; i < acc.nfeatures(); i++, acc.bump()) {
       // XXX: currently, multi-dimensional features are all or nothing; if any of
       // the individual values are masked, we treat the whole feature value as
@@ -172,22 +174,24 @@ public:
     }
   }
 
-  inline size_t
-  remove_value(const common::recarray::dataview &view, common::rng_t &rng)
-  {
-    MICROSCOPES_DCHECK(view.size() == nentities(), "invalid view");
-    common::recarray::row_accessor acc = view.get();
-    const size_t eid = view.index();
-    return remove_value(eid, acc, rng);
-  }
+  //inline size_t
+  //remove_value(const common::recarray::dataview &view, common::rng_t &rng)
+  //{
+  //  MICROSCOPES_DCHECK(view.size() == nentities(), "invalid view");
+  //  common::recarray::row_accessor acc = view.get();
+  //  const size_t eid = view.index();
+  //  return remove_value(eid, acc, rng);
+  //}
 
   inline size_t
-  remove_value(size_t eid, common::recarray::row_accessor &acc, common::rng_t &rng)
+  remove_value(size_t eid,
+      common::recarray::row_accessor &acc, common::rng_t &rng)
   {
     auto ret = groups_.remove_value(eid);
     auto &g = ret.second;
     acc.reset();
-    MICROSCOPES_ASSERT(acc.nfeatures() == g.size());
+    MICROSCOPES_DCHECK(acc.nfeatures() == g.size(),
+        "nfeatures mismatch");
     for (size_t i = 0; i < acc.nfeatures(); i++, acc.bump()) {
       // XXX: see note in state::add_value()
       if (unlikely(acc.anymasked()))
@@ -197,32 +201,62 @@ public:
     return ret.first;
   }
 
-  std::pair<std::vector<size_t>, std::vector<float>>
+  inline std::pair<std::vector<size_t>, std::vector<float>>
   score_value(common::recarray::row_accessor &acc, common::rng_t &rng) const
   {
-    using distributions::fast_log;
     std::pair<std::vector<size_t>, std::vector<float>> ret;
     ret.first.reserve(ngroups());
     ret.second.reserve(ngroups());
+    inplace_score_value(ret, acc, rng);
+    return ret;
+  }
+
+  inline void
+  inplace_score_value(
+    std::pair<std::vector<size_t>, std::vector<float>> &scores,
+    common::recarray::row_accessor &acc,
+    common::rng_t &rng) const
+  {
+    MICROSCOPES_DCHECK(acc.nfeatures() == nfeatures(),
+        "nfeatures mismatch");
+
+    scores.first.clear();
+    scores.second.clear();
+
+    using distributions::fast_log;
+
+    // stash the value_accessors so we don't have to keep
+    // reconstructing them in the inner loop below
+    std::vector<std::pair<bool, common::value_accessor>> accessors;
+    accessors.reserve(nfeatures());
+    acc.reset();
+    for (size_t i = 0; i < acc.nfeatures(); i++, acc.bump()) {
+      if (unlikely(acc.anymasked()))
+        accessors.emplace_back(true, common::value_accessor());
+      else
+        accessors.emplace_back(false, acc.get());
+    }
+
     float pseudocounts = 0.;
-    for (auto &group : groups_) {
-      const float pseudocount = groups_.pseudocount(group.first, group.second);
+    for (const auto &group : groups_) {
+      const float pseudocount =
+        groups_.pseudocount(group.first, group.second);
       float sum = fast_log(pseudocount);
-      acc.reset();
-      MICROSCOPES_ASSERT(acc.nfeatures() == group.second.data_.size());
-      for (size_t i = 0; i < acc.nfeatures(); i++, acc.bump()) {
-        if (unlikely(acc.anymasked()))
+      MICROSCOPES_ASSERT(accessors.size() == group.second.data_.size());
+      for (size_t i = 0; i < accessors.size(); i++) {
+        if (unlikely(accessors[i].first))
           continue;
-        sum += group.second.data_[i]->score_value(*hypers_[i], acc.get(), rng);
+        sum += group.second.data_[i]->score_value(
+            *hypers_[i], accessors[i].second, rng);
       }
-      ret.first.push_back(group.first);
-      ret.second.push_back(sum);
+      scores.first.push_back(group.first);
+      scores.second.push_back(sum);
       pseudocounts += pseudocount;
     }
+
     const float lgnorm = fast_log(pseudocounts);
-    for (auto &s : ret.second)
+    for (auto &s : scores.second)
       s -= lgnorm;
-    return ret;
   }
 
   // accumulate (sum) score_data over the suff-stats of the cartesian-product
@@ -349,7 +383,7 @@ public:
     return models_;
   }
 
-  inline const size_t
+  inline size_t
   nmodels() const
   {
     return models().size();
@@ -434,15 +468,17 @@ public:
     else {
       MICROSCOPES_DCHECK(assignments.size() == data.size(),
         "invalid length assignment vector");
-      const size_t max_elem =
-        *std::max_element(assignments.begin(), assignments.end());
-      MICROSCOPES_DCHECK(max_elem < def.groups(),
+      MICROSCOPES_DCHECK(
+        *std::max_element(
+            assignments.begin(), assignments.end()) < def.groups(),
         "invalid assignment vector");
       assign = assignments;
     }
     data.reset();
-    for (size_t i = 0; i < assign.size(); i++, data.next())
-      p->add_value(assign[i], data, rng);
+    for (size_t i = 0; i < assign.size(); i++, data.next()) {
+      auto acc = data.get();
+      p->add_value(assign[i], i, acc, rng);
+    }
     return p;
   }
 
@@ -575,8 +611,10 @@ public:
     for (size_t i = 0; i < ngroups; i++)
       p->create_group(rng);
     data.reset();
-    for (size_t i = 0; i < assign.size(); i++, data.next())
-      p->add_value(assign[i], data, rng);
+    for (size_t i = 0; i < assign.size(); i++, data.next()) {
+      auto acc = data.get();
+      p->add_value(assign[i], i, acc, rng);
+    }
     return p;
   }
 
@@ -715,6 +753,16 @@ public:
   {
     common::recarray::row_accessor acc = data_->get(eid);
     return impl_->score_value(acc, rng);
+  }
+
+  void
+  inplace_score_value(
+      std::pair<std::vector<size_t>, std::vector<float>> &scores,
+      size_t eid,
+      common::rng_t &rng) const override
+  {
+    common::recarray::row_accessor acc = data_->get(eid);
+    impl_->inplace_score_value(scores, acc, rng);
   }
 
   float score_assignment()
