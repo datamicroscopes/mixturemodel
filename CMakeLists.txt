@@ -8,7 +8,15 @@ if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
    set(CMAKE_BUILD_TYPE Release)
 endif()
 
-set(CMAKE_CXX_FLAGS "-Wall -g -MD -std=c++0x")
+set(CMAKE_CXX_FLAGS "-Wall -Wextra -g -MD -std=c++0x")
+
+# since we use distributions headers, we need to inherit their
+# no-strict-aliasing warnings rule otherwise deal with compiler noise
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-strict-aliasing")
+
+# this warning is annoying; who cares about unused parameters
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-parameter")
+
 if(APPLE)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
   # for anaconda builds
