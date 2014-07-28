@@ -3,12 +3,20 @@ all: release
 .PHONY: release
 release:
 	@echo "Setting up cmake (release)"
-	[ -d release ] || (mkdir release && cd release && eval `python ../cmake/print_cmake_command.py`)
+	@python ./cmake/print_cmake_command.py Release
+	[ -d release ] || (mkdir release && cd release && eval `python ../cmake/print_cmake_command.py Release`)
+
+.PHONY: relwithdebinfo
+relwithdebinfo:
+	@echo "Setting up cmake (relwithdebinfo)"
+	@python ./cmake/print_cmake_command.py RelWithDebInfo
+	[ -d relwithdebinfo ] || (mkdir relwithdebinfo && cd relwithdebinfo && eval `python ../cmake/print_cmake_command.py RelWithDebInfo`)
 
 .PHONY: debug
 debug:
 	@echo "Setting up cmake (debug)"
-	[ -d debug ] || (mkdir debug && cd debug && eval `python ../cmake/print_cmake_command.py --debug`)
+	@python ./cmake/print_cmake_command.py Debug
+	[ -d debug ] || (mkdir debug && cd debug && eval `python ../cmake/print_cmake_command.py Debug`)
 
 .PHONY: test
 test:

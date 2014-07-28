@@ -28,7 +28,9 @@ endif()
 # taken from distributions
 #set(CMAKE_CXX_FLAGS_MATHOPT "-mfpmath=sse -msse4.1 -ffast-math -funsafe-math-optimizations")
 set(CMAKE_CXX_FLAGS_MATHOPT "-mfpmath=sse -msse4.1")
+
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG ${CMAKE_CXX_FLAGS_MATHOPT}")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELEASE} -fno-omit-frame-pointer")
 set(CMAKE_CXX_FLAGS_DEBUG "-DDEBUG_MODE")
 
 # give our include dirs the most precedent
