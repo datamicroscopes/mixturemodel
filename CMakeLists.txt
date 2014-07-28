@@ -5,7 +5,7 @@ project(microscopes_mixturemodel)
 
 # default mode is Release
 if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
-   set(CMAKE_BUILD_TYPE Release)
+  set(CMAKE_BUILD_TYPE RelWithDebInfo)
 endif()
 
 set(CMAKE_CXX_FLAGS "-Wall -Wextra -g -MD -std=c++0x")
