@@ -44,7 +44,7 @@ group_type_from_string(
   common::rng_t rng; // XXX: hack
   io::MixtureModelGroup m;
   common::util::protobuf_from_string(m, s);
-  MICROSCOPES_DCHECK(m.suffstats_size() == models.size(), "sizes do not match");
+  MICROSCOPES_DCHECK((size_t)m.suffstats_size() == models.size(), "sizes do not match");
   group_type g;
   g.reserve(models.size());
   for (size_t i = 0; i < models.size(); i++) {
@@ -490,7 +490,7 @@ public:
     hypers.reserve(def.models().size());
     io::MixtureModelState m;
     common::util::protobuf_from_string(m, s);
-    MICROSCOPES_DCHECK(m.hypers_size() == def.models().size(), "inconsistent");
+    MICROSCOPES_DCHECK((size_t)m.hypers_size() == def.models().size(), "inconsistent");
     for (size_t i = 0; i < def.models().size(); i++) {
       auto &p = def.models()[i];
       hypers.emplace_back(p->create_hypers());
@@ -626,7 +626,7 @@ public:
     hypers.reserve(def.models().size());
     io::MixtureModelState m;
     common::util::protobuf_from_string(m, s);
-    MICROSCOPES_DCHECK(m.hypers_size() == def.models().size(), "inconsistent");
+    MICROSCOPES_DCHECK((size_t)m.hypers_size() == def.models().size(), "inconsistent");
     for (size_t i = 0; i < def.models().size(); i++) {
       auto &p = def.models()[i];
       hypers.emplace_back(p->create_hypers());
