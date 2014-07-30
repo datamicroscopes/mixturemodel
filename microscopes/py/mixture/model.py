@@ -132,7 +132,7 @@ class state(object):
                 ps = model.py_desc()._pb_type.Shared()
                 ps.ParseFromString(raw)
                 s = model.py_desc()._model_module.Shared()
-                s.load_protobuf(ps)
+                s.protobuf_load(ps)
                 self._featureshares.append(s)
 
             def group_deserialize(raw):
@@ -145,7 +145,7 @@ class state(object):
                     pg = model.py_desc()._pb_type.Group()
                     pg.ParseFromString(raw)
                     g = model.py_desc()._model_module.Group()
-                    g.load_protobuf(pg)
+                    g.protobuf_load(pg)
                     gdata.append(g)
                 return gdata
             self._groups = GroupManager.deserialize(m.groups, group_deserialize)
@@ -154,13 +154,13 @@ class state(object):
         m = MixtureModelStateMessage()
         for s, model in zip(self._featureshares, self._defn._models):
             pb = model.py_desc()._pb_type.Shared()
-            s.dump_protobuf(pb)
+            s.protobuf_dump(pb)
             m.hypers.append(pb.SerializeToString())
         def group_serialize(gdata):
             m = MixtureModelGroupMessage()
             for g, model in zip(gdata, self._defn._models):
                 pg = model.py_desc()._pb_type.Group()
-                g.dump_protobuf(pg)
+                g.protobuf_dump(pg)
                 m.suffstats.append(pg.SerializeToString())
             return m.SerializeToString()
         m.groups = self._groups.serialize(group_serialize)
