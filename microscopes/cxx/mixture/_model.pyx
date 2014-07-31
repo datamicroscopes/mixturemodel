@@ -85,7 +85,7 @@ cdef class fixed_state:
 
             if 'feature_hps' in kwargs:
                 feature_hps = kwargs['feature_hps']
-                if len(feature_hps) != defn._thisptr.get().nmodels():
+                if len(feature_hps) != int(defn._thisptr.get().nmodels()):
                     raise ValueError("expecting {} models, got {}".format(
                         len(feature_hps),
                         defn._thisptr.get().nmodels()))
@@ -303,7 +303,7 @@ cdef class state:
 
             if 'feature_hps' in kwargs:
                 feature_hps = kwargs['feature_hps']
-                if len(feature_hps) != defn._thisptr.get().nmodels():
+                if len(feature_hps) != int(defn._thisptr.get().nmodels()):
                     raise ValueError("expecting {} models, got {}".format(
                         len(feature_hps),
                         defn._thisptr.get().nmodels()))
