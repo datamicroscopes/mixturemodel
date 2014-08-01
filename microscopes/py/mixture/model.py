@@ -7,6 +7,7 @@ from microscopes.io.schema_pb2 import \
     MixtureModelState as MixtureModelStateMessage, \
     MixtureModelGroup as MixtureModelGroupMessage
 from distributions.dbg.random import sample_discrete_log, sample_discrete
+from microscopes.common import validator
 
 def sample(defn, cluster_hp=None, feature_hps=None, r=None):
     """
@@ -23,11 +24,9 @@ def sample(defn, cluster_hp=None, feature_hps=None, r=None):
     alpha = 1.0
     if cluster_hp is not None:
         alpha = float(cluster_hp['alpha'])
-    if alpha <= 0.0:
-        raise ValueError("alpha needs to be a positive real")
+    validator.validate_positive(alpha, "alpha")
     if feature_hps is not None:
-        if len(feature_hps) != len(defn._models):
-            raise ValueError("invalid # of feature hps")
+        validator.validate_len(feature_hps, len(defn._models), "feature_hps")
         for share, hp in zip(featureshares, feature_hps):
             share.load(hp)
     def init_sampler(arg):
@@ -79,6 +78,10 @@ class state(object):
         if not (('data' in kwargs) ^ ('bytes' in kwargs)):
             raise ValueError("need exaclty one of `data' or `bytes'")
 
+        valid_kwargs = ('data', 'bytes', 'r',
+                'cluster_hp', 'feature_hps', 'assignment',)
+        validator.validate_kwargs(kwargs, valid_kwargs)
+
         if 'data' in kwargs:
             # handle the random initialization case
             if 'cluster_hp' in kwargs:
@@ -88,13 +91,13 @@ class state(object):
 
             if 'feature_hps' in kwargs:
                 feature_hps = kwargs['feature_hps']
-                if len(feature_hps) != len(defn._models):
-                    raise ValueError("expecting {} models, got {}".format(
-                        len(feature_hps), len(defn._models)))
+                validator.validate_len(
+                    feature_hps, len(defn._models), "feature_hps")
             else:
                 feature_hps = [m.default_params() for m in defn._models]
 
             data = kwargs['data']
+            validator.validate_len(data, defn.n(), "data")
             self._groups = GroupManager(data.size())
             self._groups.set_hp(cluster_hp)
 
@@ -108,11 +111,9 @@ class state(object):
 
             if 'assignment' in kwargs:
                 assignment = kwargs['assignment']
-                if len(assignment) != data.size():
-                    raise ValueError("invalid assignment vector length")
+                validator.validate_len(assignment, data.size(), "assignment")
                 for s in assignment:
-                    if s < 0:
-                        raise ValueError("non-negative labels only")
+                    validator.validate_nonnegative(s)
             else:
                 assignment = random_assignment_vector(data.size())
             ngroups = max(assignment) + 1

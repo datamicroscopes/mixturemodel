@@ -76,6 +76,7 @@ cdef class fixed_state:
 
             data = kwargs['data']
             validator.validate_type(data, abstract_dataview, "data")
+            validator.validate_len(data, defn.n(), "data")
 
             if 'r' not in kwargs:
                 raise ValueError("need parameter `r'")
@@ -109,6 +110,7 @@ cdef class fixed_state:
 
             if 'assignment' in kwargs:
                 assignment = kwargs['assignment']
+                validator.validate_len(assignment, data.size(), "assignment")
                 for s in assignment:
                     validator.validate_in_range(s, len(defn._groups))
                     c_assignment.push_back(s)
@@ -323,6 +325,7 @@ cdef class state:
 
             data = kwargs['data']
             validator.validate_type(data, abstract_dataview, "data")
+            validator.validate_len(data, defn.n(), "data")
 
             if 'r' not in kwargs:
                 raise ValueError("need parameter `r'")
@@ -355,6 +358,7 @@ cdef class state:
 
             if 'assignment' in kwargs:
                 assignment = kwargs['assignment']
+                validator.validate_len(assignment, data.size(), "assignment")
                 for s in assignment:
                     validator.validate_nonnegative(s)
                     c_assignment.push_back(s)

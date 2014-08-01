@@ -24,6 +24,12 @@ cdef class fixed_model_definition:
         self._groups = groups
         self._models = list(models)
 
+    def n(self):
+        return self._n
+
+    def groups(self):
+        return self._groups
+
 cdef class model_definition:
     def __cinit__(self, int n, models):
         validator.validate_positive(n)
@@ -32,3 +38,6 @@ cdef class model_definition:
         self._thisptr.reset(new c_model_definition(n, get_cmodels(models)))
         self._n = n
         self._models = list(models)
+
+    def n(self):
+        return self._n
