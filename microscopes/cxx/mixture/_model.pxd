@@ -39,11 +39,6 @@ from microscopes.cxx.mixture._state_h cimport \
     deserialize as c_deserialize
 cimport numpy as np
 
-# python imports
-from microscopes.cxx.common._entity_state import \
-    entity_based_state_object, \
-    fixed_entity_based_state_object
-
 cdef class fixed_state:
     cdef shared_ptr[c_fixed_state] _thisptr
 

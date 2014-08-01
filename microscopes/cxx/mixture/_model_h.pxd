@@ -47,6 +47,7 @@ cdef extern from "microscopes/mixture/model.hpp" namespace "microscopes::mixture
         size_t ngroups()
         size_t groupsize(size_t) except +
         vector[size_t] groups() except +
+        cbool isactivegroup(size_t)
 
         void add_value(size_t, size_t, const row_accessor &, rng_t &) except +
         size_t remove_value(size_t, const row_accessor &, rng_t &) except +
@@ -77,6 +78,7 @@ cdef extern from "microscopes/mixture/model.hpp" namespace "microscopes::mixture
         size_t ngroups()
         size_t groupsize(size_t) except +
         vector[size_t] groups() except +
+        cbool isactivegroup(size_t)
 
         size_t create_group(rng_t &) except +
         void delete_group(size_t) except +

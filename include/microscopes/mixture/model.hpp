@@ -146,6 +146,7 @@ public:
 
   inline size_t groupsize(size_t gid) const { return groups_.groupsize(gid); }
   inline std::vector<size_t> groups() const { return groups_.groups(); }
+  inline bool isactivegroup(size_t gid) const { return groups_.isactivegroup(gid); }
 
   //inline void
   //add_value(size_t gid, const common::recarray::dataview &view, common::rng_t &rng)
