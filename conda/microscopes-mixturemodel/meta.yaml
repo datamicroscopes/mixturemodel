@@ -1,0 +1,32 @@
+package:
+  name: microscopes-mixturemodel
+  version: "0.1.0"
+
+source:
+  git_url: git@github.com:datamicroscopes/mixturemodel.git
+
+requirements:
+  build:
+    - cmake
+    - python
+    - numpy
+    - cython 0.20.2
+    - distributions
+    - microscopes-common
+    - libprotobuf
+  run:
+    - python
+    - numpy
+    - scipy
+    - distributions
+    - microscopes-common
+    - libprotobuf
+    - protobuf
+
+test:
+  imports:
+    - microscopes.py.mixture
+    - microscopes.cxx.mixture
+
+about:
+  home: https://github.com/datamicroscopes/mixturemodel
