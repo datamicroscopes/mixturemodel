@@ -5,8 +5,12 @@ UNAME=`uname`
 if [ "${UNAME}" = "Darwin" ]; then
     export EXTRA_LINK_ARGS=-headerpad_max_install_names
 elif [ "${UNAME}" = "Linux" ]; then
-    export CC=gcc-4.8
-    export CXX=g++-4.8
+    if (which g++-4.8 >/dev/null 2>&1); then
+      export CXX=g++-4.8
+    fi
+    if (which gcc-4.8 >/dev/null 2>&1); then
+      export CC=gcc-4.8
+    fi
 else
     echo "unsupported os: ${UNAME}"
     exit 1
