@@ -1,9 +1,9 @@
 from microscopes.mixture.definition import \
     fixed_model_definition, model_definition
 from microscopes.models import bb, bnb, gp, nich
-from microscopes.cxx.mixture.model import initialize, initialize_fixed
-from microscopes.cxx.common.rng import rng
-from microscopes.cxx.common.recarray.dataview import numpy_dataview
+from microscopes.mixture.model import initialize, initialize_fixed
+from microscopes.common.rng import rng
+from microscopes.common.recarray.dataview import numpy_dataview
 
 import numpy as np
 from nose.tools import assert_almost_equals

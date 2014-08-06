@@ -8,18 +8,13 @@ from distributions.dbg.models import \
 
 from microscopes.models import bb, bnb, nich
 from microscopes.mixture.definition import model_definition
-from microscopes.cxx.common.rng import rng
+from microscopes.common.rng import rng
 
-from microscopes.py.mixture.model import \
-    initialize as py_initialize, \
-    deserialize as py_deserialize
-from microscopes.cxx.mixture.model import \
+from microscopes.mixture.model import \
     initialize as cxx_initialize, \
     deserialize as cxx_deserialize
 
-from microscopes.py.common.recarray.dataview import \
-    numpy_dataview as py_numpy_dataview
-from microscopes.cxx.common.recarray.dataview import \
+from microscopes.common.recarray.dataview import \
     numpy_dataview as cxx_numpy_dataview
 
 import itertools as it
@@ -84,77 +79,33 @@ def test_operations():
         ],
         'r' : R,
     }
-    py_s = py_initialize(data=py_numpy_dataview(data), **init_args)
     cxx_s = cxx_initialize(data=cxx_numpy_dataview(data), **init_args)
 
     # *_initialize() randomly assigns all entities to a group, so we'll have to
     # unset this assignment for this test
-    unset(py_s, data, R)
     unset(cxx_s, data, R)
 
-    ensure_k_groups(py_s, 3, R)
     ensure_k_groups(cxx_s, 3, R)
 
-    assert py_s.nentities() == N
     assert cxx_s.nentities() == N
 
-    py_s.dcheck_consistency()
     cxx_s.dcheck_consistency()
 
-    assert py_s.ngroups() == 3 and set(py_s.empty_groups()) == set([0, 1, 2])
     assert cxx_s.ngroups() == 3 and set(cxx_s.empty_groups()) == set([0, 1, 2])
 
     for i, yi in enumerate(data):
         egid = i % 2
-        py_s.add_value(egid, i, yi)
-        py_s.dcheck_consistency()
         cxx_s.add_value(egid, i, yi, R)
         cxx_s.dcheck_consistency()
 
-    assert_suff_stats_equal(py_s, cxx_s, features=range(4), groups=range(2))
-
-    assert_almost_equals(py_s.score_joint(), cxx_s.score_joint(R), places=2)
-
     for i, yi in it.islice(enumerate(data), 2):
-        py_s.remove_value(i, yi)
-        py_s.dcheck_consistency()
         cxx_s.remove_value(i, yi, R)
         cxx_s.dcheck_consistency()
-
-    assert_suff_stats_equal(py_s, cxx_s, features=range(4), groups=range(2))
 
     newrow = mkrow()
     newdata = np.array([newrow], dtype=dtype)
 
-    py_score = py_s.score_value(newdata[0])
     cxx_score = cxx_s.score_value(newdata[0], R)
-
-    # XXX: technically this need not be true, but it is true for our implementations
-    assert py_score[0] == cxx_score[0]
-
-    # the scores won't be that close since the python one uses double precision
-    # whereas the c++ one uses single precision
-    assert_1darray_almst_equals(
-        scores_to_probs(py_score[1]),
-        scores_to_probs(cxx_score[1]), places=2)
-
-    py_score = py_s.score_data(None, None)
-    cxx_score = cxx_s.score_data(None, None, R)
-    assert_almost_equals(py_score, cxx_score, places=2)
-
-    py_score = py_s.score_data(0, 0)
-    cxx_score = cxx_s.score_data(0, 0, R)
-    assert_almost_equals(py_score, cxx_score, places=2)
-
-    py_score = py_s.score_data([0,1], [0])
-    cxx_score = cxx_s.score_data([0,1], [0], R)
-    assert_almost_equals(py_score, cxx_score, places=2)
-
-    py_score = py_s.score_data(np.array([0,1], dtype=np.int)[0], [0])
-    cxx_score = cxx_s.score_data(np.array([0,1], dtype=np.int)[0], [0], R)
-    assert_almost_equals(py_score, cxx_score, places=2)
-
-    py_s.dcheck_consistency()
     cxx_s.dcheck_consistency()
 
 def test_masked_operations():
@@ -184,31 +135,20 @@ def test_masked_operations():
         ],
         'r' : R,
     }
-    py_s = py_initialize(data=py_numpy_dataview(data), **init_args)
     cxx_s = cxx_initialize(data=cxx_numpy_dataview(data), **init_args)
 
     # see comment above
-    unset(py_s, data, R)
     unset(cxx_s, data, R)
-    ensure_k_groups(py_s, 3, R)
     ensure_k_groups(cxx_s, 3, R)
 
     for i, yi in enumerate(data):
         egid = i % 2
-        py_s.add_value(egid, i, yi)
         cxx_s.add_value(egid, i, yi, R)
-        py_s.dcheck_consistency()
         cxx_s.dcheck_consistency()
-
-    assert_suff_stats_equal(py_s, cxx_s, features=range(3), groups=range(3))
 
     for i, yi in enumerate(data):
-        py_s.remove_value(i, yi)
         cxx_s.remove_value(i, yi, R)
-        py_s.dcheck_consistency()
         cxx_s.dcheck_consistency()
-
-    assert_suff_stats_equal(py_s, cxx_s, features=range(3), groups=range(3))
 
 def _test_serializer(initialize_fn, deserialize_fn, dataview):
     N = 10
@@ -242,12 +182,6 @@ def _test_serializer(initialize_fn, deserialize_fn, dataview):
 
     state1 = deserialize_fn(defn, raw)
 
-
-@attr('wip')
-def test_serializer_py():
-    _test_serializer(py_initialize, py_deserialize, py_numpy_dataview)
-
-@attr('wip')
 def test_serializer_cxx():
     _test_serializer(cxx_initialize, cxx_deserialize, cxx_numpy_dataview)
 
@@ -271,21 +205,15 @@ def test_sample_post_pred():
         'feature_hps': [dist_bb.EXAMPLES[0]['shared']]*D,
         'r' : R,
     }
-    py_s = py_initialize(data=py_numpy_dataview(data), **init_args)
     cxx_s = cxx_initialize(data=cxx_numpy_dataview(data), **init_args)
 
     G = 3
-    unset(py_s, data, R)
     unset(cxx_s, data, R)
-    ensure_k_groups(py_s, 3, R)
     ensure_k_groups(cxx_s, 3, R)
 
     for i, yi in enumerate(data):
         egid = i % G
-        py_s.add_value(egid, i, yi)
         cxx_s.add_value(egid, i, yi, R)
-
-    assert_suff_stats_equal(py_s, cxx_s, features=range(D), groups=range(G))
 
     # sample
     y_new_data = mkrow()
@@ -296,7 +224,6 @@ def test_sample_post_pred():
 
     n_samples = 1000
 
-    py_samples = np.hstack([py_s.sample_post_pred(y_new)[1] for _ in xrange(n_samples)])
     cxx_samples = np.hstack([cxx_s.sample_post_pred(y_new, R)[1] for _ in xrange(n_samples)])
 
     idmap = { C : i for i, C in enumerate(it.product([False,True], repeat=D)) }
@@ -307,7 +234,4 @@ def test_sample_post_pred():
         dist /= dist.sum()
         return dist
 
-    py_dist = todist(py_samples)
     cxx_dist = todist(cxx_samples)
-
-    assert_1darray_almst_equals(py_dist, cxx_dist, places=1)

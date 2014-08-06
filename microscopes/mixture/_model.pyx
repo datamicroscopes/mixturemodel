@@ -2,11 +2,11 @@
 import numpy as np
 import numpy.ma as ma
 
-from microscopes.cxx.common._rng import rng
-from microscopes.cxx.common._entity_state import \
+from microscopes.common._rng import rng
+from microscopes.common._entity_state import \
     entity_based_state_object, \
     fixed_entity_based_state_object
-from microscopes.cxx.common.recarray._dataview cimport \
+from microscopes.common.recarray._dataview cimport \
     abstract_dataview
 from microscopes.io.schema_pb2 import CRP
 from distributions.io.schema_pb2 import DirichletDiscrete

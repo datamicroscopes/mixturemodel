@@ -3,10 +3,10 @@ from libcpp.string cimport string
 from libc.stddef cimport size_t
 
 from microscopes._shared_ptr_h cimport shared_ptr
-from microscopes.cxx.common._typedefs_h cimport hyperparam_bag_t, suffstats_bag_t
-from microscopes.cxx.common._random_fwd_h cimport rng_t
-from microscopes.cxx.common.recarray._dataview_h cimport dataview
-from microscopes.cxx.mixture._model_h cimport fixed_model_definition, fixed_state
+from microscopes.common._typedefs_h cimport hyperparam_bag_t, suffstats_bag_t
+from microscopes.common._random_fwd_h cimport rng_t
+from microscopes.common.recarray._dataview_h cimport dataview
+from microscopes.mixture._model_h cimport fixed_model_definition, fixed_state
 
 # this is annoying, we need to create a separate namespace to avoid name
 # collisions

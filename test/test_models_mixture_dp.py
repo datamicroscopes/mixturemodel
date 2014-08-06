@@ -1,15 +1,12 @@
 from microscopes.models import bb
 from microscopes.mixture.definition import model_definition
-from microscopes.cxx.common.rng import rng
-from microscopes.py.common.util import KL_discrete, logsumexp
+from microscopes.common.rng import rng
+from microscopes.common.util import KL_discrete, logsumexp
 
-from microscopes.py.common.recarray.dataview import \
-    numpy_dataview as py_numpy_dataview
-from microscopes.cxx.common.recarray.dataview import \
+from microscopes.common.recarray.dataview import \
     numpy_dataview as cxx_numpy_dataview
 
-from microscopes.py.mixture.model import initialize as py_initialize
-from microscopes.cxx.mixture.model import initialize as cxx_initialize
+from microscopes.mixture.model import initialize as cxx_initialize
 
 import numpy as np
 import numpy.ma as ma
@@ -72,17 +69,6 @@ def _test_sample_post_pred(initialize_fn, dataview, y_new, r):
     print 'KL:', kldiv
 
     assert kldiv <= 0.005
-
-
-def test_py_sample_post_pred_no_given_data():
-    _test_sample_post_pred(py_initialize, py_numpy_dataview, None, None)
-
-def test_py_sample_post_pred_given_data():
-    assert D == 5
-    y_new = ma.masked_array(
-        np.array([(True, False, True, True, True)], dtype=[('', np.bool)]*5),
-        mask=[(False, False, True, True, True)])[0]
-    _test_sample_post_pred(py_initialize, py_numpy_dataview, y_new, None)
 
 def test_cxx_sample_post_pred_no_given_data():
     _test_sample_post_pred(cxx_initialize, cxx_numpy_dataview, None, rng(7589))

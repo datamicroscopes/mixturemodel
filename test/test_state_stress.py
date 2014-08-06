@@ -1,10 +1,8 @@
 from microscopes.models import bb
 from microscopes.mixture.definition import model_definition
-from microscopes.py.mixture.model import initialize as py_initialize
-from microscopes.cxx.mixture.model import initialize as cxx_initialize
-from microscopes.cxx.common.rng import rng
-from microscopes.py.common.recarray.dataview import numpy_dataview as py_numpy_dataview
-from microscopes.cxx.common.recarray.dataview import numpy_dataview as cxx_numpy_dataview
+from microscopes.mixture.model import initialize as cxx_initialize
+from microscopes.common.rng import rng
+from microscopes.common.recarray.dataview import numpy_dataview as cxx_numpy_dataview
 
 import numpy as np
 
@@ -44,9 +42,6 @@ def _test_stress(initialize_fn, dataview, R):
                 s.remove_value(eid, Y[eid], R)
         s.dcheck_consistency()
         nops -= 1
-
-def test_stress_py():
-    _test_stress(py_initialize, py_numpy_dataview, None)
 
 def test_stress_cxx():
     _test_stress(cxx_initialize, cxx_numpy_dataview, rng())

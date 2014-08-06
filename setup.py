@@ -198,8 +198,8 @@ def make_extension(module_name):
 
 extensions = cythonize([
     make_extension('microscopes.mixture.definition'),
-    make_extension('microscopes.cxx.mixture.model'),
-    make_extension('microscopes.cxx.mixture._model'),
+    make_extension('microscopes.mixture.model'),
+    make_extension('microscopes.mixture._model'),
 ], include_path=[microscopes_common_cython_inc])
 
 with open('README.md') as f:
@@ -216,7 +216,5 @@ setup(
     maintainer_email='tu.stephenl@gmail.com',
     packages=(
         'microscopes.mixture',
-        'microscopes.cxx.mixture',
-        'microscopes.py.mixture',
     ),
     ext_modules=extensions)

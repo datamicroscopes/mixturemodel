@@ -1,4 +1,4 @@
-from microscopes.py.mixture.model import sample
+from microscopes.mixture.model import sample
 from microscopes.mixture.definition import model_definition
 from microscopes.models import bb, nich
 

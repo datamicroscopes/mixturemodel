@@ -6,9 +6,9 @@
 from microscopes.models import dm
 from microscopes.mixture.definition import model_definition
 
-from microscopes.cxx.mixture.model import initialize as cxx_initialize
-from microscopes.cxx.common.recarray.dataview import numpy_dataview as cxx_numpy_dataview
-from microscopes.cxx.common.rng import rng
+from microscopes.mixture.model import initialize as cxx_initialize
+from microscopes.common.recarray.dataview import numpy_dataview as cxx_numpy_dataview
+from microscopes.common.rng import rng
 
 import numpy as np
 import itertools as it
