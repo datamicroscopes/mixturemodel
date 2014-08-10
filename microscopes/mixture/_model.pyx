@@ -569,17 +569,21 @@ cdef class state:
 def bind_fixed(fixed_state s, abstract_dataview data):
     cdef shared_ptr[c_fixed_entity_based_state_object] px
     px.reset(new c_fixed_model(s._thisptr, data._thisptr))
-    cdef fixed_entity_based_state_object ret = \
+    cdef fixed_entity_based_state_object ret = (
         fixed_entity_based_state_object(s._defn._models)
+    )
     ret.set_fixed(px)
+    ret._refs = data
     return ret
 
 def bind(state s, abstract_dataview data):
     cdef shared_ptr[c_entity_based_state_object] px
     px.reset(new c_model(s._thisptr, data._thisptr))
-    cdef entity_based_state_object ret = \
+    cdef entity_based_state_object ret = (
         entity_based_state_object(s._defn._models)
+    )
     ret.set_entity(px)
+    ret._refs = data
     return ret
 
 def initialize_fixed(fixed_model_definition defn,
