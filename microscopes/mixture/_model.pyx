@@ -68,7 +68,7 @@ cdef class fixed_state:
             raise ValueError("need exaclty one of `data' or `bytes'")
 
         valid_kwargs = ('data', 'bytes', 'r',
-                'cluster_hp', 'feature_hps', 'assignment',)
+                        'cluster_hp', 'feature_hps', 'assignment',)
         validator.validate_kwargs(kwargs, valid_kwargs)
 
         if 'data' in kwargs:
@@ -86,7 +86,7 @@ cdef class fixed_state:
             if 'cluster_hp' in kwargs:
                 cluster_hp = kwargs['cluster_hp']
             else:
-                cluster_hp = {'alphas':[1.]*defn._groups}
+                cluster_hp = {'alphas': [1.] * defn._groups}
 
             def make_cluster_hp_bytes(cluster_hp):
                 m = DirichletDiscrete.Shared()
@@ -103,8 +103,8 @@ cdef class fixed_state:
                 feature_hps = [m._default_params for m in defn._models]
 
             feature_hps_bytes = [
-                m.py_desc().shared_dict_to_bytes(hp) \
-                    for hp, m in zip(feature_hps, defn._models)]
+                m.py_desc().shared_dict_to_bytes(hp)
+                for hp, m in zip(feature_hps, defn._models)]
             for s in feature_hps_bytes:
                 c_feature_hps_bytes.push_back(s)
 
@@ -120,8 +120,8 @@ cdef class fixed_state:
                 cluster_hp_bytes,
                 c_feature_hps_bytes,
                 c_assignment,
-                (<abstract_dataview>data)._thisptr.get()[0],
-                (<rng>r)._thisptr[0])
+                (<abstract_dataview> data)._thisptr.get()[0],
+                (<rng> r)._thisptr[0])
         else:
             # handle the deserialize case
             self._thisptr = c_deserialize_fixed(
@@ -146,7 +146,7 @@ cdef class fixed_state:
         m = DirichletDiscrete.Shared()
         raw = str(self._thisptr.get().get_cluster_hp())
         m.ParseFromString(raw)
-        return {'alphas':np.array(m.alphas)}
+        return {'alphas': np.array(m.alphas)}
 
     def set_cluster_hp(self, dict raw):
         m = DirichletDiscrete.Shared()
@@ -186,7 +186,9 @@ cdef class fixed_state:
         self._validate_fid(fid)
         self._validate_gid(gid)
         models = self._defn._models
-        cdef suffstats_bag_t raw = models[fid].py_desc().shared_dict_to_bytes(d)
+        cdef suffstats_bag_t raw = (
+            models[fid].py_desc().shared_dict_to_bytes(d)
+        )
         self._thisptr.get().set_suffstats(gid, fid, raw)
 
     def assignments(self):
@@ -238,7 +240,9 @@ cdef class fixed_state:
 
         cdef numpy_dataview view = get_dataview_for(y)
         cdef row_accessor acc = view._thisptr.get().get()
-        cdef pair[vector[size_t], vector[float]] ret = self._thisptr.get().score_value(acc, r._thisptr[0])
+        cdef pair[vector[size_t], vector[float]] ret = (
+            self._thisptr.get().score_value(acc, r._thisptr[0])
+        )
         ret0 = list(ret.first)
         ret1 = np.array(list(ret.second))
         return ret0, ret1
@@ -273,20 +277,22 @@ cdef class fixed_state:
         if y_new is None:
             D = self.nfeatures()
             y_new = ma.masked_array(
-                np.array([tuple(0 for _ in xrange(D))], dtype=[('',int)]*D),
+                np.array([tuple(0 for _ in xrange(D))], dtype=[('', int)] * D),
                 mask=[tuple(True for _ in xrange(D))])
 
         cdef numpy_dataview view = get_dataview_for(y_new)
         cdef row_accessor acc = view._thisptr.get().get()
 
         cdef vector[runtime_type] out_ctypes = \
-                self._defn._thisptr.get().get_runtime_types()
+            self._defn._thisptr.get().get_runtime_types()
         out_dtype = [('', get_np_type(t)) for t in out_ctypes]
 
         # build an appropriate numpy array to store the output
         cdef np.ndarray out_npd = np.zeros(1, dtype=out_dtype)
 
-        cdef row_mutator mut = row_mutator(<uint8_t *> out_npd.data, &out_ctypes)
+        cdef row_mutator mut = (
+            row_mutator(<uint8_t *> out_npd.data, &out_ctypes)
+        )
         gid = self._thisptr.get().sample_post_pred(acc, mut, r._thisptr[0])
 
         return gid, out_npd
@@ -317,7 +323,7 @@ cdef class state:
             raise ValueError("need exaclty one of `data' or `bytes'")
 
         valid_kwargs = ('data', 'bytes', 'r',
-                'cluster_hp', 'feature_hps', 'assignment',)
+                        'cluster_hp', 'feature_hps', 'assignment',)
         validator.validate_kwargs(kwargs, valid_kwargs)
 
         if 'data' in kwargs:
@@ -335,7 +341,7 @@ cdef class state:
             if 'cluster_hp' in kwargs:
                 cluster_hp = kwargs['cluster_hp']
             else:
-                cluster_hp = {'alpha':1.}
+                cluster_hp = {'alpha': 1.}
 
             def make_cluster_hp_bytes(cluster_hp):
                 m = CRP()
@@ -351,8 +357,8 @@ cdef class state:
                 feature_hps = [m.default_params() for m in defn._models]
 
             feature_hps_bytes = [
-                m.py_desc().shared_dict_to_bytes(hp) \
-                    for hp, m in zip(feature_hps, defn._models)]
+                m.py_desc().shared_dict_to_bytes(hp)
+                for hp, m in zip(feature_hps, defn._models)]
             for s in feature_hps_bytes:
                 c_feature_hps_bytes.push_back(s)
 
@@ -368,8 +374,8 @@ cdef class state:
                 cluster_hp_bytes,
                 c_feature_hps_bytes,
                 c_assignment,
-                (<abstract_dataview>data)._thisptr.get()[0],
-                (<rng>r)._thisptr[0])
+                (<abstract_dataview> data)._thisptr.get()[0],
+                (<rng> r)._thisptr[0])
         else:
             # handle the deserialize case
             self._thisptr = c_deserialize(
@@ -394,7 +400,7 @@ cdef class state:
         m = CRP()
         raw = str(self._thisptr.get().get_cluster_hp())
         m.ParseFromString(raw)
-        return {'alpha':m.alpha}
+        return {'alpha': m.alpha}
 
     def set_cluster_hp(self, dict raw):
         m = CRP()
@@ -434,7 +440,9 @@ cdef class state:
         self._validate_fid(fid)
         self._validate_gid(gid)
         models = self._defn._models
-        cdef suffstats_bag_t raw = models[fid].py_desc().shared_dict_to_bytes(d)
+        cdef suffstats_bag_t raw = (
+            models[fid].py_desc().shared_dict_to_bytes(d)
+        )
         self._thisptr.get().set_suffstats(gid, fid, raw)
 
     def assignments(self):
@@ -497,7 +505,9 @@ cdef class state:
 
         cdef numpy_dataview view = get_dataview_for(y)
         cdef row_accessor acc = view._thisptr.get().get()
-        cdef pair[vector[size_t], vector[float]] ret = self._thisptr.get().score_value(acc, r._thisptr[0])
+        cdef pair[vector[size_t], vector[float]] ret = (
+            self._thisptr.get().score_value(acc, r._thisptr[0])
+        )
         ret0 = list(ret.first)
         ret1 = np.array(list(ret.second))
         return ret0, ret1
@@ -532,7 +542,7 @@ cdef class state:
         if y_new is None:
             D = self.nfeatures()
             y_new = ma.masked_array(
-                np.array([tuple(0 for _ in xrange(D))], dtype=[('',int)]*D),
+                np.array([tuple(0 for _ in xrange(D))], dtype=[('', int)] * D),
                 mask=[tuple(True for _ in xrange(D))])
 
         cdef numpy_dataview view = get_dataview_for(y_new)
@@ -542,13 +552,15 @@ cdef class state:
         self._thisptr.get().ensure_k_empty_groups(1, False, r._thisptr[0])
 
         cdef vector[runtime_type] out_ctypes = \
-                self._defn._thisptr.get().get_runtime_types()
+            self._defn._thisptr.get().get_runtime_types()
         out_dtype = [('', get_np_type(t)) for t in out_ctypes]
 
         # build an appropriate numpy array to store the output
         cdef np.ndarray out_npd = np.zeros(1, dtype=out_dtype)
 
-        cdef row_mutator mut = row_mutator(<uint8_t *> out_npd.data, &out_ctypes)
+        cdef row_mutator mut = (
+            row_mutator(<uint8_t *> out_npd.data, &out_ctypes)
+        )
         gid = self._thisptr.get().sample_post_pred(acc, mut, r._thisptr[0])
 
         return gid, out_npd
@@ -566,6 +578,7 @@ cdef class state:
     def serialize(self):
         return self._thisptr.get().serialize()
 
+
 def bind_fixed(fixed_state s, abstract_dataview data):
     cdef shared_ptr[c_fixed_entity_based_state_object] px
     px.reset(new c_fixed_model(s._thisptr, data._thisptr))
@@ -575,6 +588,7 @@ def bind_fixed(fixed_state s, abstract_dataview data):
     ret.set_fixed(px)
     ret._refs = data
     return ret
+
 
 def bind(state s, abstract_dataview data):
     cdef shared_ptr[c_entity_based_state_object] px
@@ -586,11 +600,13 @@ def bind(state s, abstract_dataview data):
     ret._refs = data
     return ret
 
+
 def initialize_fixed(fixed_model_definition defn,
                      abstract_dataview data,
                      rng r,
                      **kwargs):
     return fixed_state(defn=defn, data=data, r=r, **kwargs)
+
 
 def initialize(model_definition defn,
                abstract_dataview data,
@@ -598,8 +614,10 @@ def initialize(model_definition defn,
                **kwargs):
     return state(defn=defn, data=data, r=r, **kwargs)
 
+
 def deserialize_fixed(fixed_model_definition defn, bytes):
     return fixed_state(defn=defn, bytes=bytes)
+
 
 def deserialize(model_definition defn, bytes):
     return state(defn=defn, bytes=bytes)

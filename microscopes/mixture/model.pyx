@@ -1,16 +1,18 @@
-from microscopes.mixture._model import \
-    state, \
-    fixed_state, \
-    bind, \
-    bind_fixed, \
-    initialize, \
-    initialize_fixed, \
-    deserialize, \
-    deserialize_fixed
+from microscopes.mixture._model import (
+    state,
+    fixed_state,
+    bind,
+    bind_fixed,
+    initialize,
+    initialize_fixed,
+    deserialize,
+    deserialize_fixed,
+)
 
 from microscopes.common import validator
 from microscopes.common.random import sample_discrete
 import numpy as np
+
 
 def sample(defn, cluster_hp=None, feature_hps=None, r=None):
     """
@@ -32,16 +34,20 @@ def sample(defn, cluster_hp=None, feature_hps=None, r=None):
         validator.validate_len(feature_hps, len(defn._models), "feature_hps")
         for share, hp in zip(featureshares, feature_hps):
             share.load(hp)
+
     def init_sampler(arg):
         typ, s = arg
         samp = typ.Sampler()
         samp.init(s)
         return samp
+
     def new_cluster_params():
         return tuple(map(init_sampler, zip(featuretypes, featureshares)))
+
     def new_sample(params):
         data = tuple(samp.eval(s) for samp, s in zip(params, featureshares))
         return data
+
     cluster_params = [new_cluster_params()]
     samples = [[new_sample(cluster_params[-1])]]
     for _ in xrange(1, defn._n):
@@ -55,5 +61,7 @@ def sample(defn, cluster_hp=None, feature_hps=None, r=None):
             cluster_counts[choice] += 1
             params = cluster_params[choice]
             samples[choice].append(new_sample(params))
-    return tuple(np.array(ys, dtype=dtypes) for ys in samples), \
-           tuple(cluster_params)
+    return (
+        tuple(np.array(ys, dtype=dtypes) for ys in samples),
+        tuple(cluster_params)
+    )

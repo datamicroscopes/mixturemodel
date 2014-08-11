@@ -32,3 +32,7 @@ travis_install:
 travis_script: 
 	(cd relwithdebinfo && CTEST_OUTPUT_ON_FAILURE=true make test)
 	(cd test && nosetests --verbose -a '!slow')
+
+.PHONY: lint
+lint:
+	pep8 --filename=*.py,*.pyx --ignore=E265 microscopes

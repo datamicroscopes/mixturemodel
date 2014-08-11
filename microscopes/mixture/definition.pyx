@@ -1,16 +1,19 @@
 from microscopes.models import model_descriptor
 from microscopes.common import validator
 
+
 cdef vector[shared_ptr[c_component_model]] get_cmodels(models):
     cdef vector[shared_ptr[c_component_model]] c_models
     for m in models:
-        c_models.push_back((<_base>m._c_descriptor).get())
+        c_models.push_back((<_base> m._c_descriptor).get())
     return c_models
+
 
 def _validate(models):
     validator.validate_nonempty(models)
     for m in models:
         validator.validate_type(m, model_descriptor)
+
 
 cdef class fixed_model_definition:
     def __cinit__(self, int n, int groups, models):
@@ -29,6 +32,7 @@ cdef class fixed_model_definition:
 
     def groups(self):
         return self._groups
+
 
 cdef class model_definition:
     def __cinit__(self, int n, models):
