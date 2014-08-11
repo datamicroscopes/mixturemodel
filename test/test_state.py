@@ -237,10 +237,10 @@ def test_sample_post_pred():
 
     # sample
     y_new_data = mkrow()
-    y_new_mask = [randombool() for _ in xrange(D)]
+    y_new_mask = tuple(randombool() for _ in xrange(D))
     y_new = ma.masked_array(
         np.array([y_new_data], dtype=dtype),
-        mask=y_new_mask)[0]
+        mask=[y_new_mask])[0]
 
     n_samples = 1000
 
