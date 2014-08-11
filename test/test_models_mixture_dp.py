@@ -12,7 +12,7 @@ import numpy as np
 import numpy.ma as ma
 import itertools as it
 
-from nose.plugins.attrib import attr
+#from nose.plugins.attrib import attr
 from nose.tools import assert_almost_equals
 
 N, D = 1000, 5
@@ -83,4 +83,4 @@ def test_cxx_sample_post_pred_given_data():
         np.array([(True, False, True, True, True)], dtype=[('', np.bool)] * 5),
         mask=[(False, False, True, True, True)])[0]
     _test_sample_post_pred(
-        cxx_initialize, cxx_numpy_dataview, None, rng(543234))
+        cxx_initialize, cxx_numpy_dataview, y_new, rng(543234))

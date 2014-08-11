@@ -8,7 +8,7 @@ from microscopes.common.recarray.dataview import (
 
 import numpy as np
 
-from nose.plugins.attrib import attr
+#from nose.plugins.attrib import attr
 
 
 def _test_stress(initialize_fn, dataview, R):

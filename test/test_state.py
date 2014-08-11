@@ -1,6 +1,5 @@
 # test the low level primitive operations
 
-from distributions.util import scores_to_probs
 from distributions.dbg.models import \
     bb as dist_bb, \
     bnb as dist_bnb, \
@@ -21,7 +20,7 @@ import itertools as it
 import numpy as np
 import numpy.ma as ma
 
-from nose.plugins.attrib import attr
+#from nose.plugins.attrib import attr
 from nose.tools import assert_almost_equals
 
 
@@ -114,6 +113,7 @@ def test_operations():
     newdata = np.array([newrow], dtype=dtype)
 
     cxx_score = cxx_s.score_value(newdata[0], R)
+    assert cxx_score is not None
     cxx_s.dcheck_consistency()
 
 
@@ -197,6 +197,7 @@ def _test_serializer(initialize_fn, deserialize_fn, dataview):
     raw = state.serialize()
 
     state1 = deserialize_fn(defn, raw)
+    assert state1 is not None
 
 
 def test_serializer_cxx():
@@ -239,7 +240,7 @@ def test_sample_post_pred():
     y_new_mask = [randombool() for _ in xrange(D)]
     y_new = ma.masked_array(
         np.array([y_new_data], dtype=dtype),
-        mask=y_new_data)[0]
+        mask=y_new_mask)[0]
 
     n_samples = 1000
 
@@ -256,3 +257,9 @@ def test_sample_post_pred():
         return dist
 
     cxx_dist = todist(cxx_samples)
+    assert cxx_dist is not None
+
+    # XXX(stephentu):
+    # when we had python models, we used to compare the posterior
+    # sample distribution between the python and C++ models. now
+    # we don't do anything useful with the samples
