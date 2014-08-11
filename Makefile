@@ -35,4 +35,4 @@ travis_script:
 
 .PHONY: lint
 lint:
-	pep8 --filename=*.py,*.pyx --ignore=E265 microscopes
+	pep8 --filename=*.py,*.pyx --ignore=E265 microscopes test

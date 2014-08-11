@@ -2,21 +2,24 @@ from microscopes.models import bb
 from microscopes.mixture.definition import model_definition
 from microscopes.mixture.model import initialize as cxx_initialize
 from microscopes.common.rng import rng
-from microscopes.common.recarray.dataview import numpy_dataview as cxx_numpy_dataview
+from microscopes.common.recarray.dataview import (
+    numpy_dataview as cxx_numpy_dataview,
+)
 
 import numpy as np
 
 from nose.plugins.attrib import attr
 
+
 def _test_stress(initialize_fn, dataview, R):
     N = 20
     D = 2
     data = np.random.random(size=(N, D)) < 0.8
-    Y = np.array([tuple(y) for y in data], dtype=[('',bool)]*D)
+    Y = np.array([tuple(y) for y in data], dtype=[('', bool)] * D)
     view = dataview(Y)
-    defn = model_definition(N, [bb]*D)
+    defn = model_definition(N, [bb] * D)
 
-    s = initialize_fn(defn, view, cluster_hp={'alpha':2.0}, r=R)
+    s = initialize_fn(defn, view, cluster_hp={'alpha': 2.0}, r=R)
 
     CHANGE_GROUP = 1
     CHANGE_VALUE = 2
@@ -42,6 +45,7 @@ def _test_stress(initialize_fn, dataview, R):
                 s.remove_value(eid, Y[eid], R)
         s.dcheck_consistency()
         nops -= 1
+
 
 def test_stress_cxx():
     _test_stress(cxx_initialize, cxx_numpy_dataview, rng())
