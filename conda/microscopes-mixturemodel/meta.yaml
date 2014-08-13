@@ -10,8 +10,8 @@ requirements:
     - cmake
     - python
     - numpy
-    - cython 0.20.2
-    - distributions
+    - cython >=0.20.2
+    - distributions >=2.0.23
     - libprotobuf
     - eigen3
     - microscopes-common
@@ -19,7 +19,7 @@ requirements:
     - python
     - numpy
     - scipy
-    - distributions
+    - distributions >=2.0.23
     - libprotobuf
     - protobuf
     - microscopes-common
