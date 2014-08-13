@@ -1,3 +1,6 @@
+# cython: embedsignature=True
+
+
 from microscopes.mixture._model import (
     state,
     fixed_state,

@@ -1,3 +1,6 @@
+# cython: embedsignature=True
+
+
 # python imports
 import numpy as np
 import numpy.ma as ma
