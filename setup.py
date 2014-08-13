@@ -5,6 +5,8 @@ from distutils.extension import Extension
 from distutils.version import LooseVersion
 from Cython.Distutils import build_ext
 from Cython.Build import cythonize
+import Cython.Compiler.Options
+Cython.Compiler.Options.fail_fast = True
 from cython import __version__ as cython_version
 
 import numpy
