@@ -4,6 +4,7 @@ set -e
 UNAME=`uname`
 if [ "${UNAME}" = "Darwin" ]; then
     export EXTRA_LINK_ARGS=-headerpad_max_install_names
+    export MACOSX_DEPLOYMENT_TARGET=10.7
 elif [ "${UNAME}" = "Linux" ]; then
     if (which g++-4.8 >/dev/null 2>&1); then
       export CXX=g++-4.8
