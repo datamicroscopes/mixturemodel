@@ -59,6 +59,8 @@ cdef numpy_dataview get_dataview_for(y):
 # XXX: fixed_state and state duplicate code for now
 
 cdef class fixed_state:
+    """The underlying state of a fixed group bayesian mixture model.
+    """
     def __cinit__(self, fixed_model_definition defn, **kwargs):
         self._defn = defn
         cdef vector[hyperparam_bag_t] c_feature_hps_bytes
@@ -314,6 +316,8 @@ cdef class fixed_state:
         return self._thisptr.get().serialize()
 
 cdef class state:
+    """The underlying state of a Dirichlet Process mixture model.
+    """
     def __cinit__(self, model_definition defn, **kwargs):
         self._defn = defn
         cdef vector[hyperparam_bag_t] c_feature_hps_bytes
@@ -583,6 +587,8 @@ cdef class state:
 
 
 def bind_fixed(fixed_state s, abstract_dataview data):
+    """
+    """
     cdef shared_ptr[c_fixed_entity_based_state_object] px
     px.reset(new c_fixed_model(s._thisptr, data._thisptr))
     cdef fixed_entity_based_state_object ret = (
@@ -594,6 +600,8 @@ def bind_fixed(fixed_state s, abstract_dataview data):
 
 
 def bind(state s, abstract_dataview data):
+    """
+    """
     cdef shared_ptr[c_entity_based_state_object] px
     px.reset(new c_model(s._thisptr, data._thisptr))
     cdef entity_based_state_object ret = (
@@ -608,6 +616,8 @@ def initialize_fixed(fixed_model_definition defn,
                      abstract_dataview data,
                      rng r,
                      **kwargs):
+    """
+    """
     return fixed_state(defn=defn, data=data, r=r, **kwargs)
 
 
@@ -615,12 +625,18 @@ def initialize(model_definition defn,
                abstract_dataview data,
                rng r,
                **kwargs):
+    """
+    """
     return state(defn=defn, data=data, r=r, **kwargs)
 
 
 def deserialize_fixed(fixed_model_definition defn, bytes):
+    """
+    """
     return fixed_state(defn=defn, bytes=bytes)
 
 
 def deserialize(model_definition defn, bytes):
+    """
+    """
     return state(defn=defn, bytes=bytes)

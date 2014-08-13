@@ -18,8 +18,25 @@ import numpy as np
 
 
 def sample(defn, cluster_hp=None, feature_hps=None, r=None):
-    """
-    sample iid values from the generative process described by defn
+    """Sample i.i.d. values from the generative process described by `defn`.
+
+    Parameters
+    ----------
+    defn : ``model_definition``
+        The generative process
+    cluster_hp : dict, optional
+    feature_hps : iterable of dicts, optional
+    r : ``rng``, optional
+
+    Returns
+    -------
+    samples : tuple of samples in clusters
+    params : tuple of cluster parameters
+
+    Notes
+    -----
+    Currently, the `r` parameter is ignored
+
     """
     dtypes = [m.py_desc().get_np_dtype() for m in defn._models]
     dtypes = np.dtype([('', dtype) for dtype in dtypes])
