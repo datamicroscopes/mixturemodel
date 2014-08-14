@@ -19,6 +19,19 @@ def _validate(models):
 
 
 cdef class fixed_model_definition:
+    """Structural definition for a fixed mixture model
+
+    Parameters
+    ----------
+    n : int
+        Number of observations
+    groups : int
+        Number of groups (fixed)
+    models : iterable of model descriptors
+        The component likelihood models
+
+    """
+
     def __cinit__(self, int n, int groups, models):
         validator.validate_positive(n)
         validator.validate_positive(groups)
@@ -36,8 +49,26 @@ cdef class fixed_model_definition:
     def groups(self):
         return self._groups
 
+    def models(self):
+        return self._models
+
+    def __reduce__(self):
+        args = (self._n, self._groups, self._models)
+        return (_reconstruct_fixed_model_definition, args)
+
 
 cdef class model_definition:
+    """Structural definition for a dirichlet process mixture model
+
+    Parameters
+    ----------
+    n : int
+        Number of observations
+    models : iterable of model descriptors
+        The component likelihood models
+
+    """
+
     def __cinit__(self, int n, models):
         validator.validate_positive(n)
         _validate(models)
@@ -48,3 +79,17 @@ cdef class model_definition:
 
     def n(self):
         return self._n
+
+    def models(self):
+        return self._models
+
+    def __reduce__(self):
+        return (_reconstruct_model_definition, (self._n, self._models))
+
+
+def _reconstruct_fixed_model_definition(n, groups, models):
+    return fixed_model_definition(n, groups, models)
+
+
+def _reconstruct_model_definition(n, models):
+    return model_definition(n, models)

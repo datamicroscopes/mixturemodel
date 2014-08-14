@@ -11,13 +11,13 @@ cdef class fixed_model_definition:
     # ideally would not be shared pointer, but
     # doesn't have no-arg ctor
     cdef shared_ptr[c_fixed_model_definition] _thisptr
-    cdef public int _n
-    cdef public int _groups
-    cdef public list _models
+    cdef readonly int _n
+    cdef readonly int _groups
+    cdef readonly list _models
 
 cdef class model_definition:
     # ideally would not be shared pointer, but
     # doesn't have no-arg ctor
     cdef shared_ptr[c_model_definition] _thisptr
-    cdef public int _n
-    cdef public list _models
+    cdef readonly int _n
+    cdef readonly list _models
