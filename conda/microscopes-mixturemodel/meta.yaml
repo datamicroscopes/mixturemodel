@@ -15,6 +15,7 @@ requirements:
     - libprotobuf
     - eigen3
     - microscopes-common
+    - microscopes-kernels
   run:
     - python
     - numpy
@@ -23,6 +24,7 @@ requirements:
     - libprotobuf
     - protobuf
     - microscopes-common
+    - microscopes-kernels
 
 test:
   imports:
