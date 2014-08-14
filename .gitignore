@@ -9,3 +9,6 @@
 *.d
 *.prog
 *.dSYM
+/microscopes/**/*.cpp
+/microscopes/**/*.so
+/microscopes_mixturemodel.egg-info
