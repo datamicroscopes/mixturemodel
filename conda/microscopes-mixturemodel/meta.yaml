@@ -27,6 +27,8 @@ requirements:
 test:
   imports:
     - microscopes.mixture
+    - microscopes.mixture.definition
+    - microscopes.mixture.model
 
 about:
   home: https://github.com/datamicroscopes/mixturemodel
