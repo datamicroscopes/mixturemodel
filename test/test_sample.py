@@ -1,16 +1,23 @@
 from microscopes.mixture.model import sample
 from microscopes.mixture.definition import model_definition
-from microscopes.models import bb, nich
+from microscopes.models import (
+    bb,
+    bnb,
+    gp,
+    nich,
+    dd,
+    niw,
+)
 
-from distributions.dbg.models import nich as dbg_nich
+from nose.tools import assert_equals, assert_true
 
 
 def test_sample_sanity():
     # just a sanity check
-    defn = model_definition(10, [bb, nich])
-    sample(defn)
-    sample(defn,
-           cluster_hp={'alpha': 10.},
-           feature_hps=[
-               {'alpha': 54.3, 'beta': 34.5},
-               dbg_nich.EXAMPLES[0]['shared']])
+    defn = model_definition(10, [bb, bnb, gp, nich, dd(5), niw(4)])
+    clusters, samplers = sample(defn)
+    assert_equals(len(clusters), len(samplers))
+    for cluster in clusters:
+        assert_true(len(cluster) > 0)
+        for v in cluster:
+            assert_equals(len(v), len(defn.models()))

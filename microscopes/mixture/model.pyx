@@ -31,7 +31,7 @@ def sample(defn, cluster_hp=None, feature_hps=None, r=None):
     Returns
     -------
     samples : tuple of samples in clusters
-    params : tuple of cluster parameters
+    params : tuple of Sampler objects, used to sample the clusters
 
     Notes
     -----
