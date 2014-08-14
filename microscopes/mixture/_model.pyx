@@ -6,11 +6,11 @@ import numpy as np
 import numpy.ma as ma
 
 from microscopes.common._rng import rng
-from microscopes.common._entity_state import \
-    entity_based_state_object, \
-    fixed_entity_based_state_object
-from microscopes.common.recarray._dataview cimport \
-    abstract_dataview
+from microscopes.common._entity_state import (
+    entity_based_state_object,
+    fixed_entity_based_state_object,
+)
+from microscopes.common.recarray._dataview cimport abstract_dataview
 from microscopes.io.schema_pb2 import CRP
 from distributions.io.schema_pb2 import DirichletDiscrete
 from microscopes.common import validator
@@ -103,13 +103,13 @@ cdef class fixed_state:
             if 'feature_hps' in kwargs:
                 feature_hps = kwargs['feature_hps']
                 validator.validate_len(
-                    feature_hps, len(defn._models), "feature_hps")
+                    feature_hps, len(defn.models()), "feature_hps")
             else:
-                feature_hps = [m._default_params for m in defn._models]
+                feature_hps = [m.default_hyperparams() for m in defn.models()]
 
             feature_hps_bytes = [
                 m.py_desc().shared_dict_to_bytes(hp)
-                for hp, m in zip(feature_hps, defn._models)]
+                for hp, m in zip(feature_hps, defn.models())]
             for s in feature_hps_bytes:
                 c_feature_hps_bytes.push_back(s)
 
@@ -138,12 +138,12 @@ cdef class fixed_state:
 
     # XXX: get rid of these introspection methods in the future
     def get_feature_types(self):
-        models = self._defn._models
+        models = self._defn.models()
         types = [m.py_desc()._model_module for m in models]
         return types
 
     def get_feature_dtypes(self):
-        models = self._defn._models
+        models = self._defn.models()
         dtypes = [('', m.py_desc().get_np_dtype()) for m in models]
         return np.dtype(dtypes)
 
@@ -170,27 +170,27 @@ cdef class fixed_state:
 
     def get_feature_hp(self, int i):
         self._validate_fid(i)
-        models = self._defn._models
+        models = self._defn.models()
         raw = str(self._thisptr.get().get_feature_hp(i))
         return models[i].py_desc().shared_bytes_to_dict(raw)
 
     def set_feature_hp(self, int i, dict d):
         self._validate_fid(i)
-        models = self._defn._models
+        models = self._defn.models()
         cdef hyperparam_bag_t raw = models[i].py_desc().shared_dict_to_bytes(d)
         self._thisptr.get().set_feature_hp(i, raw)
 
     def get_suffstats(self, int gid, int fid):
         self._validate_fid(fid)
         self._validate_gid(gid)
-        models = self._defn._models
+        models = self._defn.models()
         raw = str(self._thisptr.get().get_suffstats(gid, fid))
         return models[fid].py_desc().group_bytes_to_dict(raw)
 
     def set_suffstats(self, int gid, int fid, dict d):
         self._validate_fid(fid)
         self._validate_gid(gid)
-        models = self._defn._models
+        models = self._defn.models()
         cdef suffstats_bag_t raw = (
             models[fid].py_desc().shared_dict_to_bytes(d)
         )
@@ -206,7 +206,7 @@ cdef class fixed_state:
         return self._thisptr.get().nentities()
 
     def nfeatures(self):
-        return len(self._defn._models)
+        return len(self._defn.models())
 
     def groupsize(self, int gid):
         self._validate_gid(gid)
@@ -255,7 +255,7 @@ cdef class fixed_state:
     def score_data(self, features, groups, rng r):
         validator.validate_not_none(r)
         if features is None:
-            features = range(len(self._defn._models))
+            features = range(len(self._defn.models()))
         elif not hasattr(features, '__iter__'):
             features = [features]
 
@@ -359,13 +359,13 @@ cdef class state:
             if 'feature_hps' in kwargs:
                 feature_hps = kwargs['feature_hps']
                 validator.validate_len(
-                    feature_hps, len(defn._models), "feature_hps")
+                    feature_hps, len(defn.models()), "feature_hps")
             else:
-                feature_hps = [m.default_params() for m in defn._models]
+                feature_hps = [m.default_hyperparams() for m in defn.models()]
 
             feature_hps_bytes = [
                 m.py_desc().shared_dict_to_bytes(hp)
-                for hp, m in zip(feature_hps, defn._models)]
+                for hp, m in zip(feature_hps, defn.models())]
             for s in feature_hps_bytes:
                 c_feature_hps_bytes.push_back(s)
 
@@ -394,12 +394,12 @@ cdef class state:
 
     # XXX: get rid of these introspection methods in the future
     def get_feature_types(self):
-        models = self._defn._models
+        models = self._defn.models()
         types = [m.py_desc()._model_module for m in models]
         return types
 
     def get_feature_dtypes(self):
-        models = self._defn._models
+        models = self._defn.models()
         dtypes = [('', m.py_desc().get_np_dtype()) for m in models]
         return np.dtype(dtypes)
 
@@ -427,26 +427,26 @@ cdef class state:
     def get_feature_hp(self, int i):
         self._validate_fid(i)
         raw = str(self._thisptr.get().get_feature_hp(i))
-        models = self._defn._models
+        models = self._defn.models()
         return models[i].py_desc().shared_bytes_to_dict(raw)
 
     def set_feature_hp(self, int i, dict d):
         self._validate_fid(i)
-        models = self._defn._models
+        models = self._defn.models()
         cdef hyperparam_bag_t raw = models[i].py_desc().shared_dict_to_bytes(d)
         self._thisptr.get().set_feature_hp(i, raw)
 
     def get_suffstats(self, int gid, int fid):
         self._validate_fid(fid)
         self._validate_gid(gid)
-        models = self._defn._models
+        models = self._defn.models()
         raw = str(self._thisptr.get().get_suffstats(gid, fid))
         return models[fid].py_desc().group_bytes_to_dict(raw)
 
     def set_suffstats(self, int gid, int fid, dict d):
         self._validate_fid(fid)
         self._validate_gid(gid)
-        models = self._defn._models
+        models = self._defn.models()
         cdef suffstats_bag_t raw = (
             models[fid].py_desc().shared_dict_to_bytes(d)
         )
@@ -465,7 +465,7 @@ cdef class state:
         return self._thisptr.get().nentities()
 
     def nfeatures(self):
-        return len(self._defn._models)
+        return len(self._defn.models())
 
     def groupsize(self, int gid):
         self._validate_gid(gid)
@@ -522,7 +522,7 @@ cdef class state:
     def score_data(self, features, groups, rng r):
         validator.validate_not_none(r)
         if features is None:
-            features = range(len(self._defn._models))
+            features = range(len(self._defn.models()))
         elif not hasattr(features, '__iter__'):
             features = [features]
 
@@ -592,7 +592,7 @@ def bind_fixed(fixed_state s, abstract_dataview data):
     cdef shared_ptr[c_fixed_entity_based_state_object] px
     px.reset(new c_fixed_model(s._thisptr, data._thisptr))
     cdef fixed_entity_based_state_object ret = (
-        fixed_entity_based_state_object(s._defn._models)
+        fixed_entity_based_state_object(s._defn.models())
     )
     ret.set_fixed(px)
     ret._refs = data
@@ -605,7 +605,7 @@ def bind(state s, abstract_dataview data):
     cdef shared_ptr[c_entity_based_state_object] px
     px.reset(new c_model(s._thisptr, data._thisptr))
     cdef entity_based_state_object ret = (
-        entity_based_state_object(s._defn._models)
+        entity_based_state_object(s._defn.models())
     )
     ret.set_entity(px)
     ret._refs = data

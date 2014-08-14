@@ -38,20 +38,20 @@ def sample(defn, cluster_hp=None, feature_hps=None, r=None):
     Currently, the `r` parameter is ignored
 
     """
-    dtypes = [m.py_desc().get_np_dtype() for m in defn._models]
+    dtypes = [m.py_desc().get_np_dtype() for m in defn.models()]
     dtypes = np.dtype([('', dtype) for dtype in dtypes])
     cluster_counts = np.array([1], dtype=np.int)
-    featuretypes = tuple(m.py_desc()._model_module for m in defn._models)
+    featuretypes = tuple(m.py_desc()._model_module for m in defn.models())
     featureshares = [t.Shared() for t in featuretypes]
     # init with defaults
-    for share, m in zip(featureshares, defn._models):
-        share.load(m.default_params())
+    for share, m in zip(featureshares, defn.models()):
+        share.load(m.default_hyperparams())
     alpha = 1.0
     if cluster_hp is not None:
         alpha = float(cluster_hp['alpha'])
     validator.validate_positive(alpha, "alpha")
     if feature_hps is not None:
-        validator.validate_len(feature_hps, len(defn._models), "feature_hps")
+        validator.validate_len(feature_hps, len(defn.models()), "feature_hps")
         for share, hp in zip(featureshares, feature_hps):
             share.load(hp)
 

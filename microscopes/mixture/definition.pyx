@@ -3,6 +3,7 @@
 
 from microscopes.models import model_descriptor
 from microscopes.common import validator
+import operator as op
 
 
 cdef vector[shared_ptr[c_component_model]] get_cmodels(models):
@@ -15,7 +16,12 @@ cdef vector[shared_ptr[c_component_model]] get_cmodels(models):
 def _validate(models):
     validator.validate_nonempty(models)
     for m in models:
-        validator.validate_type(m, model_descriptor)
+        if hasattr(m, '__len__'):
+            validator.validate_len(m, 2)
+            validator.validate_type(m[0], model_descriptor)
+            validator.validate_type(m[1], dict)
+        else:
+            validator.validate_type(m, model_descriptor)
 
 
 cdef class fixed_model_definition:
@@ -28,7 +34,10 @@ cdef class fixed_model_definition:
     groups : int
         Number of groups (fixed)
     models : iterable of model descriptors
-        The component likelihood models
+        The component likelihood models. Each element is either `x` or
+        `(x, y)`, where `x` is a ``model_descriptor`` and `y` is a dict
+        containing the hyperpriors. If `y` is not given, then the default
+        hyperpriors are used per model.
 
     """
 
@@ -37,11 +46,21 @@ cdef class fixed_model_definition:
         validator.validate_positive(groups)
         _validate(models)
 
-        self._thisptr.reset(
-            new c_fixed_model_definition(n, groups, get_cmodels(models)))
         self._n = n
         self._groups = groups
-        self._models = list(models)
+        self._models = []
+        for model in models:
+            if hasattr(model, '__len__'):
+                m, hp = model
+            else:
+                m, hp = model, model.default_hyperpriors()
+            self._models.append((m, hp))
+
+        self._thisptr.reset(
+            new c_fixed_model_definition(
+                n,
+                groups,
+                get_cmodels(map(op.itemgetter(0), self._models))))
 
     def n(self):
         return self._n
@@ -50,7 +69,10 @@ cdef class fixed_model_definition:
         return self._groups
 
     def models(self):
-        return self._models
+        return map(op.itemgetter(0), self._models)
+
+    def hyperpriors(self):
+        return map(op.itemgetter(1), self._models)
 
     def __reduce__(self):
         args = (self._n, self._groups, self._models)
@@ -65,7 +87,10 @@ cdef class model_definition:
     n : int
         Number of observations
     models : iterable of model descriptors
-        The component likelihood models
+        The component likelihood models. Each element is either `x` or
+        `(x, y)`, where `x` is a ``model_descriptor`` and `y` is a dict
+        containing the hyperpriors. If `y` is not given, then the default
+        hyperpriors are used per model.
 
     """
 
@@ -73,15 +98,28 @@ cdef class model_definition:
         validator.validate_positive(n)
         _validate(models)
 
-        self._thisptr.reset(new c_model_definition(n, get_cmodels(models)))
         self._n = n
-        self._models = list(models)
+        self._models = []
+        for model in models:
+            if hasattr(model, '__len__'):
+                m, hp = model
+            else:
+                m, hp = model, model.default_hyperpriors()
+            self._models.append((m, hp))
+
+        self._thisptr.reset(
+            new c_model_definition(
+                n,
+                get_cmodels(map(op.itemgetter(0), self._models))))
 
     def n(self):
         return self._n
 
     def models(self):
-        return self._models
+        return map(op.itemgetter(0), self._models)
+
+    def hyperpriors(self):
+        return map(op.itemgetter(1), self._models)
 
     def __reduce__(self):
         return (_reconstruct_model_definition, (self._n, self._models))
