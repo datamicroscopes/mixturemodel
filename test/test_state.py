@@ -19,6 +19,7 @@ from microscopes.common.recarray.dataview import \
 import itertools as it
 import numpy as np
 import numpy.ma as ma
+import pickle
 
 #from nose.plugins.attrib import attr
 from nose.tools import assert_almost_equals
@@ -198,6 +199,10 @@ def _test_serializer(initialize_fn, deserialize_fn, dataview):
 
     state1 = deserialize_fn(defn, raw)
     assert state1 is not None
+
+    bstr = pickle.dumps(state)
+    state2 = pickle.loads(bstr)
+    assert state2 is not None
 
 
 def test_serializer_cxx():

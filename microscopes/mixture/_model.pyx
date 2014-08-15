@@ -60,6 +60,9 @@ cdef numpy_dataview get_dataview_for(y):
 
 cdef class fixed_state:
     """The underlying state of a fixed group bayesian mixture model.
+
+    You should not explicitly construct a fixed_state object.
+    Instead, use `initialize_fixed`.
     """
     def __cinit__(self, fixed_model_definition defn, **kwargs):
         self._defn = defn
@@ -315,8 +318,15 @@ cdef class fixed_state:
     def serialize(self):
         return self._thisptr.get().serialize()
 
+    def __reduce__(self):
+        return (_reconstruct_fixed_state, (self._defn, self.serialize()))
+
+
 cdef class state:
     """The underlying state of a Dirichlet Process mixture model.
+
+    You should not explicitly construct a state object.
+    Instead, use `initialize`.
     """
     def __cinit__(self, model_definition defn, **kwargs):
         self._defn = defn
@@ -585,10 +595,11 @@ cdef class state:
     def serialize(self):
         return self._thisptr.get().serialize()
 
+    def __reduce__(self):
+        return (_reconstruct_state, (self._defn, self.serialize()))
+
 
 def bind_fixed(fixed_state s, abstract_dataview data):
-    """
-    """
     cdef shared_ptr[c_fixed_entity_based_state_object] px
     px.reset(new c_fixed_model(s._thisptr, data._thisptr))
     cdef fixed_entity_based_state_object ret = (
@@ -600,8 +611,6 @@ def bind_fixed(fixed_state s, abstract_dataview data):
 
 
 def bind(state s, abstract_dataview data):
-    """
-    """
     cdef shared_ptr[c_entity_based_state_object] px
     px.reset(new c_model(s._thisptr, data._thisptr))
     cdef entity_based_state_object ret = (
@@ -616,7 +625,14 @@ def initialize_fixed(fixed_model_definition defn,
                      abstract_dataview data,
                      rng r,
                      **kwargs):
-    """
+    """Initialize state to a random, valid point in the state space
+
+    Parameters
+    ----------
+    defn : fixed model definition
+    data : recarray dataview
+    rng : random state
+
     """
     return fixed_state(defn=defn, data=data, r=r, **kwargs)
 
@@ -625,18 +641,51 @@ def initialize(model_definition defn,
                abstract_dataview data,
                rng r,
                **kwargs):
-    """
+    """Initialize state to a random, valid point in the state space
+
+    Parameters
+    ----------
+    defn : model definition
+    data : recarray dataview
+    rng : random state
+
     """
     return state(defn=defn, data=data, r=r, **kwargs)
 
 
 def deserialize_fixed(fixed_model_definition defn, bytes):
-    """
+    """Restore a fixed state object from a bytestring representation.
+
+    Note that a serialized representation of a fixed state object does
+    not contain its own structural definition.
+
+    Parameters
+    ----------
+    defn : model definition
+    bytes : bytestring representation
+
     """
     return fixed_state(defn=defn, bytes=bytes)
 
 
 def deserialize(model_definition defn, bytes):
-    """
+    """Restore a state object from a bytestring representation.
+
+    Note that a serialized representation of a state object does
+    not contain its own structural definition.
+
+    Parameters
+    ----------
+    defn : model definition
+    bytes : bytestring representation
+
     """
     return state(defn=defn, bytes=bytes)
+
+
+def _reconstruct_fixed_state(defn, bytes):
+    return deserialize_fixed(defn, bytes)
+
+
+def _reconstruct_state(defn, bytes):
+    return deserialize(defn, bytes)
