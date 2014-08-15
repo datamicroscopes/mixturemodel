@@ -1,1 +1,1 @@
-__version__ = '0.1.0'
+__version__ = '0.1.0.81792186cc31b82471ca2522320d627d1cee5381-release'

@@ -73,11 +73,11 @@ def data_with_posterior(N, defn, cluster_hp, feature_hps, preprocess_data_fn):
 
     def score_fn(assignment):
         s = initialize(defn,
-                           data,
-                           r,
-                           cluster_hp=cluster_hp,
-                           feature_hps=feature_hps,
-                           assignment=assignment)
+                       data,
+                       r,
+                       cluster_hp=cluster_hp,
+                       feature_hps=feature_hps,
+                       assignment=assignment)
         return s.score_joint(r)
     posterior = dist_on_all_clusterings(score_fn, N)
     return Y, posterior
@@ -102,10 +102,10 @@ def _test_convergence_bb_cxx(N,
         N, defn, cluster_hp, feature_hps, preprocess_data_fn)
     data = numpy_dataview(Y)
     s = initialize(nonconj_defn if nonconj else defn,
-                       data,
-                       cluster_hp=cluster_hp,
-                       feature_hps=feature_hps,
-                       r=r)
+                   data,
+                   cluster_hp=cluster_hp,
+                   feature_hps=feature_hps,
+                   r=r)
     bs = bind(s, data)
     wrapped_kernel = lambda s: kernel(s, r)
     _test_convergence(bs,

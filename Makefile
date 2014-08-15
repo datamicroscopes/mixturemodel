@@ -1,4 +1,5 @@
-all: release
+all:
+	@echo "choose a valid target"
 
 .PHONY: release
 release:
@@ -23,17 +24,23 @@ test:
 	(cd test && nosetests --verbose)
 
 .PHONY: travis_install
-travis_install: 
+travis_install:
 	make relwithdebinfo
 	(cd relwithdebinfo && make && make install)
 	pip install .
 
 .PHONY: travis_script
-travis_script: 
+travis_script:
 	(cd relwithdebinfo && CTEST_OUTPUT_ON_FAILURE=true make test)
 	(cd test && nosetests --verbose -a '!slow')
 
 .PHONY: lint
 lint:
 	pyflakes microscopes test
-	pep8 --filename=*.py,*.pyx --ignore=E265 microscopes test
+	pep8 --filename=*.py --ignore=E265 microscopes test
+	pep8 --filename=*.pyx --ignore=E265,E211,E225 microscopes
+
+.PHONY: clean
+clean:
+	rm -rf release relwithdebinfo debug microscopes_mixturemodel.egg-info
+	find microscopes/ -name '*.cpp' -o -name '*.so' -o -name '*.pyc' -type f -print0 | xargs -0 rm -f --

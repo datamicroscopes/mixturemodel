@@ -49,11 +49,13 @@ def test_dm_cxx():
 
 def test_betabin_equiv():
 
-    # https://github.com/pymc-devs/pymc/blob/a7ab153f2b58d81824a56166747c678d7f421bde/pymc/distributions/discrete.py#L84
+    # https://github.com/pymc-devs/pymc/blob/
+    # a7ab153f2b58d81824a56166747c678d7f421bde/pymc/distributions/discrete.py#L84
     def betabin_like(value, alpha, beta, n):
         return (gammaln(alpha + beta) - gammaln(alpha) - gammaln(beta) +
                 gammaln(n + 1) - gammaln(value + 1) - gammaln(n - value + 1) +
-                gammaln(alpha + value) + gammaln(n + beta - value) - gammaln(beta + alpha + n))
+                gammaln(alpha + value) + gammaln(n + beta - value) -
+                gammaln(beta + alpha + n))
 
     # this N refers to the number of trials in the binomial distribution
     N = 10

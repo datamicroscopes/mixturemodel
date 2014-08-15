@@ -59,9 +59,10 @@ def default_feature_hp_kernel_config(defn):
         if not hp:
             continue
         # XXX(stephentu): we are arbitrarily picking w=0.1
-        hparams[i] = {k : (fn, 0.1) for k, fn in hp.iteritems()}
+        hparams[i] = {k: (fn, 0.1) for k, fn in hp.iteritems()}
 
     return [('feature_hp', {'hparams': hparams})]
+
 
 def default_cluster_hp_kernel_config(defn):
     defn, is_fixed = _validate_definition(defn)
@@ -70,7 +71,7 @@ def default_cluster_hp_kernel_config(defn):
         # XXX(stephentu): should we throw an error here or print a warning?
         return []
     hp = defn.cluster_hyperprior()
-    cparam = {k : (fn, 0.1) for k, fn in hp.iteritems()}
+    cparam = {k: (fn, 0.1) for k, fn in hp.iteritems()}
     return [('cluster_hp', {'cparam': cparam})]
 
 
@@ -113,6 +114,9 @@ class runner(object):
     def __init__(self, defn, view, latent, kernel_config, r=None):
         defn, self._is_fixed = _validate_definition(defn)
         validator.validate_type(view, abstract_dataview, param_name='view')
+        if not (isinstance(latent, state) or
+                isinstance(latent, fixed_state)):
+            raise ValueError("bad latent given")
         if self._is_fixed != isinstance(latent, fixed_state):
             raise ValueError("definition and latent don't match type")
         validator.validate_len(view, defn.n())
@@ -140,7 +144,7 @@ class runner(object):
                 if config:
                     raise ValueError("assign has no parameters")
             elif name == 'assign_resample':
-                if is_fixed:
+                if self._is_fixed:
                     raise ValueError("fixed_state cannot use variable kernel")
                 if config.keys() != ['m']:
                     raise ValueError("bad config found: {}".format(config))
