@@ -14,14 +14,15 @@ from microscopes.common.recarray.dataview import numpy_dataview
 from microscopes.kernels import parallel
 from microscopes.mixture.testutil import toy_dataset
 
+import itertools as it
 from nose.tools import assert_true
 
 
-def test_runner_default_kernel_config():
+def _test_runner_default_kernel_config(kc_fn):
     defn = model_definition(10, [bb, nich, niw(3)])
     Y = toy_dataset(defn)
     view = numpy_dataview(Y)
-    kc = runner.default_kernel_config(defn)
+    kc = kc_fn(defn)
     prng = rng()
 
     ntries = 5
@@ -39,6 +40,19 @@ def test_runner_default_kernel_config():
             return  # success
 
     assert_true(False)  # exceeded ntries
+
+
+def test_runner_default_kernel_config():
+    _test_runner_default_kernel_config(runner.default_kernel_config)
+
+
+def test_runner_default_kernel_config_with_cluster():
+    def kc_fn(defn):
+        return list(it.chain(
+            runner.default_assign_kernel_config(defn),
+            runner.default_feature_hp_kernel_config(defn),
+            runner.default_cluster_hp_kernel_config(defn)))
+    _test_runner_default_kernel_config(kc_fn)
 
 
 def test_runner_multiprocessing():

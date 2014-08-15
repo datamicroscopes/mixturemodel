@@ -16,37 +16,69 @@ from microscopes.mixture.model import (
 )
 from microscopes.kernels import gibbs, slice
 
+import itertools as it
 
-def default_kernel_config(defn):
+
+def _validate_definition(defn):
     if not (isinstance(defn, model_definition) or
             isinstance(defn, fixed_model_definition)):
         raise ValueError("bad defn given")
     is_fixed = isinstance(defn, fixed_model_definition)
+    return defn, is_fixed
 
+
+def default_assign_kernel_config(defn):
+    # XXX(stephentu): model_descriptors should implement
+    # is_conjugate()
+    nonconj_models = filter(lambda x: x.name() == 'bbnc', defn.models())
+
+    defn, is_fixed = _validate_definition(defn)
     if is_fixed:
+        assert not nonconj_models
         return ['assign_fixed']
+
+    # assignment
+    if nonconj_models:
+        kernels = [
+            ('assign_resample', {'m': 10}),
+            ('theta', {'p': 0.1}),  # XXX(stephentu): 0.1 is arbitrary
+                                    # XXX(stephentu): don't assume bbnc
+        ]
     else:
-        # XXX(stephentu): model_descriptors should implement
-        # is_conjugate()
-        nonconj_models = filter(lambda x: x.name() == 'bbnc', defn.models())
+        kernels = ['assign']
 
-        # assignment
-        if nonconj_models:
-            kernels = [('assign_resample', {'m': 10})]
-            # XXX(stephentu): also slice sample on the parameter instantiations
-        else:
-            kernels = ['assign']
+    return kernels
 
-        # hyperparams
-        hparams = {}
-        for i, hp in enumerate(defn.hyperpriors()):
-            if not hp:
-                continue
-            # XXX(stephentu): we are arbitrarily picking w=0.1
-            hparams[i] = {k : (fn, 0.1) for k, fn in hp.iteritems()}
 
-        kernels.append(('hp', {'cparam': {}, 'hparams': hparams}))
-        return kernels
+def default_feature_hp_kernel_config(defn):
+    defn, _ = _validate_definition(defn)
+
+    # hyperparams
+    hparams = {}
+    for i, hp in enumerate(defn.hyperpriors()):
+        if not hp:
+            continue
+        # XXX(stephentu): we are arbitrarily picking w=0.1
+        hparams[i] = {k : (fn, 0.1) for k, fn in hp.iteritems()}
+
+    return [('feature_hp', {'hparams': hparams})]
+
+def default_cluster_hp_kernel_config(defn):
+    defn, is_fixed = _validate_definition(defn)
+    if is_fixed:
+        # XXX(stephentu): cannot specify hyperprior on dirichlet yet
+        # XXX(stephentu): should we throw an error here or print a warning?
+        return []
+    hp = defn.cluster_hyperprior()
+    cparam = {k : (fn, 0.1) for k, fn in hp.iteritems()}
+    return [('cluster_hp', {'cparam': cparam})]
+
+
+def default_kernel_config(defn):
+    # XXX(stephentu): should the default config also include cluster_hp?
+    return list(it.chain(
+        default_assign_kernel_config(defn),
+        default_feature_hp_kernel_config(defn)))
 
 
 class runner(object):
@@ -70,25 +102,19 @@ class runner(object):
         the particular kernel. In the former case where `y` is omitted, then
         the defaults parameters for each kernel are used.
 
+        Possible values of `x` are:
+        {'assign_fixed', 'assign', 'assign_resample',
+         'feature_hp', 'cluster_hp'}
+
     r : ``rng``, optional
 
     """
 
     def __init__(self, defn, view, latent, kernel_config, r=None):
-        if not (isinstance(defn, model_definition) or
-                isinstance(defn, fixed_model_definition)):
-            raise ValueError("bad defn given")
-
+        defn, self._is_fixed = _validate_definition(defn)
         validator.validate_type(view, abstract_dataview, param_name='view')
-
-        if not (isinstance(latent, state) or
-                isinstance(latent, fixed_state)):
-            raise ValueError("bad latent given")
-
-        self._is_fixed = isinstance(defn, fixed_model_definition)
         if self._is_fixed != isinstance(latent, fixed_state):
             raise ValueError("definition and latent don't match type")
-
         validator.validate_len(view, defn.n())
 
         self._defn = defn
@@ -101,6 +127,7 @@ class runner(object):
                 name, config = kernel
             else:
                 name, config = kernel, {}
+            validator.validate_type(config, dict)
             if name == 'assign_fixed':
                 if not self._is_fixed:
                     # really a warning
@@ -117,8 +144,19 @@ class runner(object):
                     raise ValueError("fixed_state cannot use variable kernel")
                 if config.keys() != ['m']:
                     raise ValueError("bad config found: {}".format(config))
-            elif name == 'hp':
-                validator.validate_kwargs(config, ('cparam', 'hparams'))
+                validator.validate_positive(config['m'])
+            elif name == 'feature_hp':
+                validator.validate_kwargs(config, ('hparams',))
+                nfeatures = len(defn.models())
+                valid_keys = set(xrange(nfeatures))
+                if not set(config['hparams'].keys()).issubset(valid_keys):
+                    msg = "bad config found: {}".format(config['hparams'])
+                    raise ValueError(msg)
+            elif name == 'cluster_hp':
+                validator.validate_kwargs(config, ('cparam',))
+                if config['cparam'].keys() != ['alpha']:
+                    msg = "bad config found: {}".format(config['cparam'])
+                    raise ValueError(msg)
             else:
                 raise ValueError("bad kernel found: {}".format(name))
             self._kernel_config.append((name, config))
@@ -142,11 +180,14 @@ class runner(object):
                     gibbs.assign(model, self._r)
                 elif name == 'assign_resample':
                     gibbs.assign_resample(model, config['m'], self._r)
-                elif name == 'hp':
+                elif name == 'feature_hp':
                     slice.hp(model,
                              self._r,
-                             cparam=config['cparam'],
                              hparams=config['hparams'])
+                elif name == 'cluster_hp':
+                    slice.hp(model,
+                             self._r,
+                             cparam=config['cparam'])
                 else:
                     assert False, "should not be reach"
 

@@ -24,3 +24,4 @@ cdef class model_definition:
     cdef shared_ptr[c_model_definition] _thisptr
     cdef readonly int _n
     cdef readonly list _models
+    cdef readonly dict _cluster_hyperprior

@@ -3,6 +3,7 @@
 
 from microscopes.models import model_descriptor
 from microscopes.common import validator
+from microscopes.common.scalar_functions import log_exponential
 import operator as op
 
 
@@ -38,6 +39,11 @@ cdef class fixed_model_definition:
         `(x, y)`, where `x` is a ``model_descriptor`` and `y` is a dict
         containing the hyperpriors. If `y` is not given, then the default
         hyperpriors are used per model.
+
+    Notes
+    -----
+    There is currently no interface to express a hyperprior on the dirichlet
+    distribution which governs the clustering behavior.
 
     """
 
@@ -91,10 +97,16 @@ cdef class model_definition:
         `(x, y)`, where `x` is a ``model_descriptor`` and `y` is a dict
         containing the hyperpriors. If `y` is not given, then the default
         hyperpriors are used per model.
+    cluster_hyperprior : dict, optional
+        Describes the hyperior for the CRP
+
 
     """
 
-    def __cinit__(self, int n, models):
+    def __cinit__(self,
+                  int n,
+                  models,
+                  cluster_hyperprior={'alpha': log_exponential(1.)}):
         validator.validate_positive(n)
         _validate(models)
 
@@ -106,6 +118,12 @@ cdef class model_definition:
             else:
                 m, hp = model, model.default_hyperpriors()
             self._models.append((m, hp))
+
+        validator.validate_type(cluster_hyperprior, dict)
+        if cluster_hyperprior.keys() != ['alpha']:
+            msg = "invalid cluster hp: {}".format(cluster_hyperprior)
+            raise ValueError(msg)
+        self._cluster_hyperprior = cluster_hyperprior
 
         self._thisptr.reset(
             new c_model_definition(
@@ -121,13 +139,17 @@ cdef class model_definition:
     def hyperpriors(self):
         return map(op.itemgetter(1), self._models)
 
+    def cluster_hyperprior(self):
+        return self._cluster_hyperprior
+
     def __reduce__(self):
-        return (_reconstruct_model_definition, (self._n, self._models))
+        args = (self._n, self._models, self._cluster_hyperprior)
+        return (_reconstruct_model_definition, args)
 
 
 def _reconstruct_fixed_model_definition(n, groups, models):
     return fixed_model_definition(n, groups, models)
 
 
-def _reconstruct_model_definition(n, models):
-    return model_definition(n, models)
+def _reconstruct_model_definition(n, models, cluster_hyperprior):
+    return model_definition(n, models, cluster_hyperprior)
