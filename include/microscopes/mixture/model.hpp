@@ -148,56 +148,45 @@ public:
   inline std::vector<size_t> groups() const { return groups_.groups(); }
   inline bool isactivegroup(size_t gid) const { return groups_.isactivegroup(gid); }
 
-  //inline void
-  //add_value(size_t gid, const common::recarray::dataview &view, common::rng_t &rng)
-  //{
-  //  MICROSCOPES_DCHECK(view.size() == nentities(), "invalid view");
-  //  common::recarray::row_accessor acc = view.get();
-  //  const size_t eid = view.index();
-  //  add_value(gid, eid, acc, rng);
-  //}
-
   inline void
-  add_value(size_t gid, size_t eid,
-      common::recarray::row_accessor &acc, common::rng_t &rng)
+  add_value(size_t gid,
+            size_t eid,
+            common::recarray::row_accessor &acc,
+            common::rng_t &rng)
   {
     auto &g = groups_.add_value(gid, eid);
     acc.reset();
     MICROSCOPES_DCHECK(acc.nfeatures() == g.size(),
         "nfeatures mismatch");
-    for (size_t i = 0; i < acc.nfeatures(); i++, acc.bump()) {
-      // XXX: currently, multi-dimensional features are all or nothing; if any of
-      // the individual values are masked, we treat the whole feature value as
-      // masked
-      if (unlikely(acc.anymasked()))
+    const size_t nfeatures = acc.nfeatures();
+    for (size_t i = 0; i < nfeatures; i++, acc.bump()) {
+      // XXX: currently, multi-dimensional features are all or nothing; if any
+      // of the individual values are masked, we treat the whole feature value
+      // as masked
+      auto value = acc.get();
+      if (unlikely(value.anymasked()))
         continue;
-      g[i]->add_value(*hypers_[i], acc.get(), rng);
+      g[i]->add_value(*hypers_[i], value, rng);
     }
   }
 
-  //inline size_t
-  //remove_value(const common::recarray::dataview &view, common::rng_t &rng)
-  //{
-  //  MICROSCOPES_DCHECK(view.size() == nentities(), "invalid view");
-  //  common::recarray::row_accessor acc = view.get();
-  //  const size_t eid = view.index();
-  //  return remove_value(eid, acc, rng);
-  //}
-
   inline size_t
   remove_value(size_t eid,
-      common::recarray::row_accessor &acc, common::rng_t &rng)
+               common::recarray::row_accessor &acc,
+               common::rng_t &rng)
   {
     auto ret = groups_.remove_value(eid);
     auto &g = ret.second;
     acc.reset();
     MICROSCOPES_DCHECK(acc.nfeatures() == g.size(),
         "nfeatures mismatch");
-    for (size_t i = 0; i < acc.nfeatures(); i++, acc.bump()) {
+    const size_t nfeatures = acc.nfeatures();
+    for (size_t i = 0; i < nfeatures; i++, acc.bump()) {
       // XXX: see note in state::add_value()
-      if (unlikely(acc.anymasked()))
+      auto value = acc.get();
+      if (unlikely(value.anymasked()))
         continue;
-      g[i]->remove_value(*hypers_[i], acc.get(), rng);
+      g[i]->remove_value(*hypers_[i], value, rng);
     }
     return ret.first;
   }
@@ -232,10 +221,11 @@ public:
     accessors.reserve(nfeatures());
     acc.reset();
     for (size_t i = 0; i < acc.nfeatures(); i++, acc.bump()) {
-      if (unlikely(acc.anymasked()))
+      auto value = acc.get();
+      if (unlikely(value.anymasked()))
         accessors.emplace_back(true, common::value_accessor());
       else
-        accessors.emplace_back(false, acc.get());
+        accessors.emplace_back(false, value);
     }
 
     float pseudocounts = 0.;

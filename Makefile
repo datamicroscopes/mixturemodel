@@ -19,9 +19,11 @@ debug:
 	@python ./cmake/print_cmake_command.py Debug
 	[ -d debug ] || (mkdir debug && cd debug && eval `python ../cmake/print_cmake_command.py Debug`)
 
+CPU_COUNT=$(shell python -c 'import multiprocessing as m; print m.cpu_count()')
+
 .PHONY: test
 test:
-	(cd test && nosetests --verbose)
+	(cd test && NOSE_PROCESSES=$(CPU_COUNT) NOSE_PROCESS_TIMEOUT=240 nosetests --verbose)
 
 .PHONY: travis_install
 travis_install:
