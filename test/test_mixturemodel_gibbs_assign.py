@@ -16,7 +16,6 @@ from microscopes.common.testutil import (
     assert_discrete_dist_approx,
     permutation_iter,
     permutation_canonical,
-    dist_on_all_clusterings,
 )
 from microscopes.mixture.testutil import data_with_posterior
 

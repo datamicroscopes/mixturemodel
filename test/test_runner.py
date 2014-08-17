@@ -76,9 +76,11 @@ def test_runner_convergence():
     r = runner.runner(defn, view, latent, ['assign'])
     r.run(r=prng, niters=1000)  # burnin
     idmap = {C: i for i, C in enumerate(permutation_iter(N))}
+
     def sample_fn():
         r.run(r=prng, niters=10)
         return idmap[tuple(permutation_canonical(latent.assignments()))]
+
     assert_discrete_dist_approx(sample_fn, posterior, ntries=100)
 
 
@@ -110,7 +112,7 @@ def test_runner_multiprocessing_convergence():
     runners = [runner.runner(defn, view, latent, ['assign'])
                for latent in latents]
     r = parallel.runner(runners)
-    r.run(r=prng, niters=1000) # burnin
+    r.run(r=prng, niters=1000)  # burnin
     idmap = {C: i for i, C in enumerate(permutation_iter(N))}
 
     def sample_iter():

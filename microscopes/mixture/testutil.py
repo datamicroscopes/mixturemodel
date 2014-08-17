@@ -27,6 +27,7 @@ def data_with_posterior(defn,
     if preprocess_data_fn:
         Y = preprocess_data_fn(Y)
     data = numpy_dataview(Y)
+
     def score_fn(assignment):
         s = initialize(defn,
                        data,
@@ -35,5 +36,6 @@ def data_with_posterior(defn,
                        feature_hps=feature_hps,
                        assignment=assignment)
         return s.score_joint(r)
+
     posterior = dist_on_all_clusterings(score_fn, defn.n())
     return Y, posterior
