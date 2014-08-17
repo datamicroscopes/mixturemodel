@@ -91,10 +91,11 @@ cdef class fixed_state:
             r = kwargs['r']
             validator.validate_type(r, rng, "r")
 
-            if 'cluster_hp' in kwargs:
-                cluster_hp = kwargs['cluster_hp']
-            else:
+            cluster_hp = kwargs.get('cluster_hp', None)
+            if cluster_hp is None:
                 cluster_hp = {'alphas': [1.] * defn._groups}
+            validator.validate_type(cluster_hp, dict, "cluster_hp")
+            validator.validate_len(cluster_hp['alphas'], defn._groups)
 
             def make_cluster_hp_bytes(cluster_hp):
                 m = DirichletDiscrete.Shared()
@@ -103,12 +104,11 @@ cdef class fixed_state:
                 return m.SerializeToString()
             cluster_hp_bytes = make_cluster_hp_bytes(cluster_hp)
 
-            if 'feature_hps' in kwargs:
-                feature_hps = kwargs['feature_hps']
-                validator.validate_len(
-                    feature_hps, len(defn.models()), "feature_hps")
-            else:
+            feature_hps = kwargs.get('feature_hps', None)
+            if feature_hps is None:
                 feature_hps = [m.default_hyperparams() for m in defn.models()]
+            validator.validate_len(
+                feature_hps, len(defn.models()), "feature_hps")
 
             feature_hps_bytes = [
                 m.py_desc().shared_dict_to_bytes(hp)
@@ -116,8 +116,8 @@ cdef class fixed_state:
             for s in feature_hps_bytes:
                 c_feature_hps_bytes.push_back(s)
 
-            if 'assignment' in kwargs:
-                assignment = kwargs['assignment']
+            assignment = kwargs.get('assignment', None)
+            if assignment is not None:
                 validator.validate_len(assignment, data.size(), "assignment")
                 for s in assignment:
                     validator.validate_in_range(s, len(defn._groups))
@@ -355,10 +355,10 @@ cdef class state:
             r = kwargs['r']
             validator.validate_type(r, rng, "r")
 
-            if 'cluster_hp' in kwargs:
-                cluster_hp = kwargs['cluster_hp']
-            else:
+            cluster_hp = kwargs.get('cluster_hp', None)
+            if cluster_hp is None:
                 cluster_hp = {'alpha': 1.}
+            validator.validate_type(cluster_hp, dict, "cluster_hp")
 
             def make_cluster_hp_bytes(cluster_hp):
                 m = CRP()
@@ -366,12 +366,11 @@ cdef class state:
                 return m.SerializeToString()
             cluster_hp_bytes = make_cluster_hp_bytes(cluster_hp)
 
-            if 'feature_hps' in kwargs:
-                feature_hps = kwargs['feature_hps']
-                validator.validate_len(
-                    feature_hps, len(defn.models()), "feature_hps")
-            else:
+            feature_hps = kwargs.get('feature_hps', None)
+            if feature_hps is None:
                 feature_hps = [m.default_hyperparams() for m in defn.models()]
+            validator.validate_len(
+                feature_hps, len(defn.models()), "feature_hps")
 
             feature_hps_bytes = [
                 m.py_desc().shared_dict_to_bytes(hp)
@@ -379,8 +378,8 @@ cdef class state:
             for s in feature_hps_bytes:
                 c_feature_hps_bytes.push_back(s)
 
-            if 'assignment' in kwargs:
-                assignment = kwargs['assignment']
+            assignment = kwargs.get('assignment', None)
+            if assignment is not None:
                 validator.validate_len(assignment, data.size(), "assignment")
                 for s in assignment:
                     validator.validate_nonnegative(s)

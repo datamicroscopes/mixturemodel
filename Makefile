@@ -23,7 +23,8 @@ CPU_COUNT=$(shell python -c 'import multiprocessing as m; print m.cpu_count()')
 
 .PHONY: test
 test:
-	(cd test && NOSE_PROCESSES=$(CPU_COUNT) NOSE_PROCESS_TIMEOUT=240 nosetests --verbose)
+	(cd test && NOSE_PROCESSES=$(CPU_COUNT) NOSE_PROCESS_TIMEOUT=240 nosetests -a '!uses_mp' --verbose)
+	(cd test && nosetests -a 'uses_mp' --verbose)
 
 .PHONY: travis_install
 travis_install:
@@ -34,7 +35,8 @@ travis_install:
 .PHONY: travis_script
 travis_script:
 	(cd relwithdebinfo && CTEST_OUTPUT_ON_FAILURE=true make test)
-	(cd test && nosetests --verbose -a '!slow')
+	(cd test && NOSE_PROCESSES=$(CPU_COUNT) NOSE_PROCESS_TIMEOUT=240 nosetests --verbose -a '!uses_mp,!slow')
+	(cd test && nosetests --verbose -a 'uses_mp,!slow')
 
 .PHONY: lint
 lint:

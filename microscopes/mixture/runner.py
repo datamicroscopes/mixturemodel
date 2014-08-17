@@ -107,11 +107,9 @@ class runner(object):
         {'assign_fixed', 'assign', 'assign_resample',
          'feature_hp', 'cluster_hp'}
 
-    r : ``rng``, optional
-
     """
 
-    def __init__(self, defn, view, latent, kernel_config, r=None):
+    def __init__(self, defn, view, latent, kernel_config):
         defn, self._is_fixed = _validate_definition(defn)
         validator.validate_type(view, abstract_dataview, param_name='view')
         if not (isinstance(latent, state) or
@@ -165,12 +163,8 @@ class runner(object):
                 raise ValueError("bad kernel found: {}".format(name))
             self._kernel_config.append((name, config))
 
-        if r is None:
-            r = rng()
+    def run(self, r, niters=10000):
         validator.validate_type(r, rng, param_name='r')
-        self._r = r
-
-    def run(self, niters=10000):
         validator.validate_positive(niters, param_name='niters')
         if self._is_fixed:
             model = bind_fixed(self._latent, self._view)
@@ -179,19 +173,15 @@ class runner(object):
         for _ in xrange(niters):
             for name, config in self._kernel_config:
                 if name == 'assign_fixed':
-                    gibbs.assign_fixed(model, self._r)
+                    gibbs.assign_fixed(model, r)
                 elif name == 'assign':
-                    gibbs.assign(model, self._r)
+                    gibbs.assign(model, r)
                 elif name == 'assign_resample':
-                    gibbs.assign_resample(model, config['m'], self._r)
+                    gibbs.assign_resample(model, config['m'], r)
                 elif name == 'feature_hp':
-                    slice.hp(model,
-                             self._r,
-                             hparams=config['hparams'])
+                    slice.hp(model, r, hparams=config['hparams'])
                 elif name == 'cluster_hp':
-                    slice.hp(model,
-                             self._r,
-                             cparam=config['cparam'])
+                    slice.hp(model, r, cparam=config['cparam'])
                 else:
                     assert False, "should not be reach"
 

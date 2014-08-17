@@ -18,6 +18,7 @@ from microscopes.common.testutil import (
     permutation_canonical,
     dist_on_all_clusterings,
 )
+from microscopes.mixture.testutil import data_with_posterior
 
 import itertools as it
 import numpy as np
@@ -63,26 +64,6 @@ def data_with_assignment(Y_clusters):
     return np.hstack(Y_clusters), list(assignments)
 
 
-def data_with_posterior(N, defn, cluster_hp, feature_hps, preprocess_data_fn):
-    Y_clusters, _ = sample(defn, cluster_hp, feature_hps)
-    Y = np.hstack(Y_clusters)
-    if preprocess_data_fn:
-        Y = preprocess_data_fn(Y)
-    data = numpy_dataview(Y)
-    r = rng()
-
-    def score_fn(assignment):
-        s = initialize(defn,
-                       data,
-                       r,
-                       cluster_hp=cluster_hp,
-                       feature_hps=feature_hps,
-                       assignment=assignment)
-        return s.score_joint(r)
-    posterior = dist_on_all_clusterings(score_fn, N)
-    return Y, posterior
-
-
 def _test_convergence_bb_cxx(N,
                              D,
                              kernel,
@@ -99,7 +80,7 @@ def _test_convergence_bb_cxx(N,
     defn = model_definition(N, [bb] * D)
     nonconj_defn = model_definition(N, [bbnc] * D)
     Y, posterior = data_with_posterior(
-        N, defn, cluster_hp, feature_hps, preprocess_data_fn)
+        defn, cluster_hp, feature_hps, preprocess_data_fn)
     data = numpy_dataview(Y)
     s = initialize(nonconj_defn if nonconj else defn,
                    data,
