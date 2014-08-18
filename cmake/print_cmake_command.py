@@ -25,8 +25,7 @@ if __name__ == '__main__':
         a, b = os.path.split(a)
         assert b == 'bin'
         conda_env_path = a
-    print 'cmake -DCMAKE_BUILD_TYPE={} -DCMAKE_INSTALL_PREFIX={} -DEXTRA_INCLUDE_PATH={} -DEXTRA_LIBRARY_PATH={} ..'.format(
+    print 'cmake -DCMAKE_BUILD_TYPE={} -DCMAKE_INSTALL_PREFIX={} -DCMAKE_PREFIX_PATH={} ..'.format(
             build_type,
             conda_env_path,
-            os.path.join(conda_env_path, 'include'),
-            os.path.join(conda_env_path, 'lib'))
+            conda_env_path)
