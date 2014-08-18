@@ -28,6 +28,14 @@ def _validate_definition(defn):
 
 
 def default_assign_kernel_config(defn):
+    """Creates a default kernel configuration for sampling the assignment
+    (clustering) vector. The default kernel is currently a gibbs sampler.
+
+    Parameters
+    ----------
+    defn : mixturemodel definition
+
+    """
     # XXX(stephentu): model_descriptors should implement
     # is_conjugate()
     nonconj_models = filter(lambda x: x.name() == 'bbnc', defn.models())
@@ -51,6 +59,17 @@ def default_assign_kernel_config(defn):
 
 
 def default_feature_hp_kernel_config(defn):
+    """Creates a default kernel configuration for sampling the component
+    (feature) model hyper-parameters. The default kernel is currently
+    a one-dimensional slice sampler.
+
+    Parameters
+    ----------
+    defn : mixturemodel definition
+        The hyper-priors set in the definition are used to configure the
+        hyper-parameter sampling kernels.
+
+    """
     defn, _ = _validate_definition(defn)
 
     # hyperparams
@@ -65,7 +84,18 @@ def default_feature_hp_kernel_config(defn):
 
 
 def default_cluster_hp_kernel_config(defn):
+    """Creates a default kernel configuration for sampling the clustering
+    (Chinese Restaurant Process) model hyper-parameter. The default kernel is
+    currently a one-dimensional slice sampler.
+
+    Parameters
+    ----------
+    defn : mixturemodel definition
+        The hyper-priors set in the definition are used to configure the
+        hyper-parameter sampling kernels.
+    """
     defn, is_fixed = _validate_definition(defn)
+
     if is_fixed:
         # XXX(stephentu): cannot specify hyperprior on dirichlet yet
         # XXX(stephentu): should we throw an error here or print a warning?
@@ -76,6 +106,15 @@ def default_cluster_hp_kernel_config(defn):
 
 
 def default_kernel_config(defn):
+    """Creates a default kernel configuration suitable for general purpose
+    inference. Currently configures an assignment sampler followed by a
+    component hyper-parameter sampler.
+
+    Parameters
+    ----------
+    defn : mixturemodel definition
+
+    """
     # XXX(stephentu): should the default config also include cluster_hp?
     return list(it.chain(
         default_assign_kernel_config(defn),
@@ -164,6 +203,15 @@ class runner(object):
             self._kernel_config.append((name, config))
 
     def run(self, r, niters=10000):
+        """Run the specified mixturemodel kernel for `niters`, in a single
+        thread.
+
+        Parameters
+        ----------
+        r : random state
+        niters : int
+
+        """
         validator.validate_type(r, rng, param_name='r')
         validator.validate_positive(niters, param_name='niters')
         if self._is_fixed:
@@ -186,4 +234,6 @@ class runner(object):
                     assert False, "should not be reach"
 
     def get_latent(self):
+        """Returns the current value of the underlying state object.
+        """
         return self._latent
