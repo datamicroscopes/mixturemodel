@@ -132,3 +132,17 @@ def test_runner_multiprocessing_convergence():
         return sample_fn()
 
     assert_discrete_dist_approx(sample_fn, posterior, ntries=100, kl_places=2)
+
+
+@attr('slow')
+def test_runner_multyvac():
+    defn = model_definition(10, [bb, nich, niw(3)])
+    Y = toy_dataset(defn)
+    view = numpy_dataview(Y)
+    kc = runner.default_kernel_config(defn)
+    prng = rng()
+    latents = [model.initialize(defn, view, prng)
+               for _ in xrange(mp.cpu_count())]
+    runners = [runner.runner(defn, view, latent, kc) for latent in latents]
+    r = parallel.runner(runners, backend='multyvac', layer='perf4', core='f2')
+    r.run(r=prng, niters=1000)
