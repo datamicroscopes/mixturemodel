@@ -3,7 +3,6 @@
 from distutils.core import setup
 from distutils.extension import Extension
 from distutils.version import LooseVersion
-from Cython.Distutils import build_ext
 from Cython.Build import cythonize
 import Cython.Compiler.Options
 Cython.Compiler.Options.fail_fast = True
@@ -13,8 +12,10 @@ import numpy
 import sys
 import os
 import json
+import re
 
-from subprocess import Popen, PIPE, check_call
+from subprocess import Popen, PIPE
+
 
 def get_git_sha1():
     try:
@@ -26,13 +27,14 @@ def get_git_sha1():
     sha1 = repo.commits()[0].id
     return sha1
 
+
 def find_dependency(soname, incname):
     def test(prefix):
         sofile = os.path.join(prefix, 'lib/{}'.format(soname))
         incdir = os.path.join(prefix, 'include/{}'.format(incname))
         if os.path.isfile(sofile) and os.path.isdir(incdir):
-            return os.path.join(prefix, 'lib'), \
-                   os.path.join(prefix, 'include')
+            return (os.path.join(prefix, 'lib'),
+                    os.path.join(prefix, 'include'))
         return None
     if 'VIRTUAL_ENV' in os.environ:
         ret = test(os.environ['VIRTUAL_ENV'])
@@ -46,13 +48,15 @@ def find_dependency(soname, incname):
                 return ret[0], ret[1]
     if 'CONDA_DEFAULT_ENV' in os.environ:
         # shell out to conda to get info
-        s = Popen(['conda', 'info', '--json'], shell=False, stdout=PIPE).stdout.read()
+        cmd = ['conda', 'info', '--json']
+        s = Popen(cmd, shell=False, stdout=PIPE).stdout.read()
         s = json.loads(s)
         if 'default_prefix' in s:
             ret = test(str(s['default_prefix']))
             if ret is not None:
                 return ret[0], ret[1]
     return None, None
+
 
 def find_cython_dependency(dirname):
     def test(prefix):
@@ -72,7 +76,8 @@ def find_cython_dependency(dirname):
                 return ret
     if 'CONDA_DEFAULT_ENV' in os.environ:
         # shell out to conda to get info
-        s = Popen(['conda', 'info', '--json'], shell=False, stdout=PIPE).stdout.read()
+        cmd = ['conda', 'info', '--json']
+        s = Popen(cmd, shell=False, stdout=PIPE).stdout.read()
         s = json.loads(s)
         if 'default_prefix' in s:
             ret = test(str(s['default_prefix']))
@@ -103,20 +108,18 @@ microscopes_common_cython_inc = find_cython_dependency('microscopes')
 microscopes_mixturemodel_lib, microscopes_mixturemodel_inc = find_dependency(
     'libmicroscopes_mixturemodel.{}'.format(so_ext), 'microscopes')
 
-version = "0.1.0"
-if not 'OFFICIAL_BUILD' in os.environ:
+join = os.path.join
+dirname = os.path.dirname
+basedir = join(dirname(__file__), 'microscopes', 'mixture')
+
+if 'OFFICIAL_BUILD' not in os.environ:
     sha1 = get_git_sha1()
     if sha1 is None:
         sha1 = 'unknown'
-    version = version + '.{}-{}'.format(sha1, 'debug' if debug_build else 'release')
-    print 'writing package version:', version
-    join = os.path.join
-    dirname = os.path.dirname
-    basedir = join(join(dirname(__file__), 'microscopes'), 'mixture')
-    pkgfile = join(basedir, '__init__.py')
-    print pkgfile
-    with open(pkgfile, 'w') as fp:
-        print >>fp, "__version__ = '{}'".format(version)
+    print 'writing git hash:', sha1
+    githashfile = join(basedir, 'githash.txt')
+    with open(githashfile, 'w') as fp:
+        print >>fp, sha1
 elif debug_build:
     raise RuntimeError("OFFICIAL_BUILD and DEBUG both set")
 
@@ -185,6 +188,7 @@ extra_link_args = []
 if 'EXTRA_LINK_ARGS' in os.environ:
     extra_link_args.append(os.environ['EXTRA_LINK_ARGS'])
 
+
 def make_extension(module_name):
     sources = [module_name.replace('.', '/') + '.pyx']
     return Extension(
@@ -207,16 +211,24 @@ extensions = cythonize([
 with open('README.md') as f:
     long_description = f.read()
 
-setup(
-    version=version,
-    name='microscopes-mixturemodel',
-    description='Non-parametric bayesian inference',
-    long_description=long_description,
-    url='https://github.com/datamicroscopes/mixturemodel',
-    author='Stephen Tu, Eric Jonas',
-    maintainer='Stephen Tu',
-    maintainer_email='tu.stephenl@gmail.com',
-    packages=(
-        'microscopes.mixture',
-    ),
-    ext_modules=extensions)
+
+version = None
+with open(join(basedir, '__init__.py')) as fp:
+    for line in fp:
+        if re.match("_version_base\s+=\s+'\S+'$", line):
+            version = line.split()[-1].strip("'")
+if not version:
+    raise RuntimeError("could not determine version")
+
+setup(version=version,
+      name='microscopes-mixturemodel',
+      description='Non-parametric bayesian inference',
+      long_description=long_description,
+      url='https://github.com/datamicroscopes/mixturemodel',
+      author='Stephen Tu, Eric Jonas',
+      maintainer='Stephen Tu',
+      maintainer_email='tu.stephenl@gmail.com',
+      packages=(
+          'microscopes.mixture',
+      ),
+      ext_modules=extensions)

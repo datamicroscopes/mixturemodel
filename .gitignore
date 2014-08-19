@@ -12,3 +12,4 @@
 /microscopes/**/*.cpp
 /microscopes/**/*.so
 /microscopes_mixturemodel.egg-info
+/microscopes/mixture/githash.txt
