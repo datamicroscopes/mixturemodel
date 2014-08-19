@@ -42,7 +42,7 @@ def posterior_predictive(q, latents, r, samples_per_chain=1):
 
     Parameters
     ----------
-    q : masked recarray
+    q : (N,) masked recarray
         The query object
     latents : list of mixturemodel latent objects
     r : random state
@@ -51,21 +51,31 @@ def posterior_predictive(q, latents, r, samples_per_chain=1):
 
     Returns
     -------
-    samples : (N,) recarray
-        where `N = len(latents) * samples_per_chain`
+    samples : (N, M) recarray
+        where `M = len(latents) * samples_per_chain`
+
+    Notes
+    -----
+    If `N=1`, the resultng `samples` will *not* be collasped into a (M,) shape
+    recarray for consistency purposes.
 
     """
 
+    if len(q.shape) != 1:
+        raise ValueError("1d masked recarrays only")
     if not len(latents):
         raise ValueError("no latents given")
     validator.validate_positive(
         samples_per_chain, param_name='samples_per_chain')
 
-    samples = []
-    for latent in latents:
-        for _ in xrange(samples_per_chain):
-            samples.append(latent.sample_post_pred(q, r)[1])
-    return np.hstack(samples)
+    def f(q):
+        samples = []
+        for latent in latents:
+            for _ in xrange(samples_per_chain):
+                samples.append(latent.sample_post_pred(q, r)[1])
+        return np.hstack(samples)
+
+    return np.array(map(f, q))
 
 
 def _is_discrete_dtype(dtype):
@@ -84,7 +94,7 @@ def posterior_predictive_statistic(q,
 
     Parameters
     ----------
-    q : masked recarray
+    q : (N,) masked recarray
         The query object
     latents : list of mixturemodel latent objects
     r : random state
@@ -95,7 +105,7 @@ def posterior_predictive_statistic(q,
 
     Returns
     -------
-    statistic : (1,) recarray
+    statistic : (N,) recarray
 
     Notes
     -----
@@ -123,29 +133,32 @@ def posterior_predictive_statistic(q,
                    "with non-integral types: {}").format(dtype)
             raise ValueError(msg)
 
-    values = [[] for _ in xrange(nfeatures)]
-    for sample in samples:
-        for lst, v in zip(values, sample):
-            lst.append(v)
+    def f(samples):
+        values = [[] for _ in xrange(nfeatures)]
+        for sample in samples:
+            for lst, v in zip(values, sample):
+                lst.append(v)
 
-    values = [np.array(v, dtype=dtype) for v, dtype in zip(values, dtypes)]
+        values = [np.array(v, dtype=dtype) for v, dtype in zip(values, dtypes)]
 
-    def statistic(value, strat):
-        if strat == 'avg':
-            mean = value.mean()
-            return mean, mean.dtype
-        elif strat == 'mode':
-            # scipy.stats.mode() is weird
-            arr = mode(value, axis=None)[0]
-            assert arr.shape == (1,)
-            return arr[0], value.dtype
-        else:
-            assert False, 'should not be reached'
+        def statistic(value, strat):
+            if strat == 'avg':
+                mean = value.mean()
+                return mean, mean.dtype
+            elif strat == 'mode':
+                # scipy.stats.mode() is weird
+                arr = mode(value, axis=None)[0]
+                assert arr.shape == (1,)
+                return arr[0], value.dtype
+            else:
+                assert False, 'should not be reached'
 
-    stat_with_dtypes = (
-        [statistic(value, strat) for value, strat in zip(values, merge)]
-    )
+        stat_with_dtypes = (
+            [statistic(value, strat) for value, strat in zip(values, merge)]
+        )
 
-    return np.array(
-        [tuple(map(op.itemgetter(0), stat_with_dtypes))],
-        dtype=[('', dt) for _, dt in stat_with_dtypes])
+        return np.array(
+            [tuple(map(op.itemgetter(0), stat_with_dtypes))],
+            dtype=[('', dt) for _, dt in stat_with_dtypes])
+
+    return np.hstack(map(f, samples))

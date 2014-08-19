@@ -29,12 +29,18 @@ def test_posterior_predictive():
     prng = rng()
     view = numpy_dataview(Y)
     latents = [model.initialize(defn, view, prng) for _ in xrange(10)]
+
     q = ma.masked_array(
         np.array([(False,) * D], dtype=[('', bool)] * D),
         mask=[(False,) * (D / 2) + (True,) * (D / 2)])
     samples = query.posterior_predictive(q, latents, prng)
-    assert_equals(len(samples.shape), 1)
-    assert_equals(samples.shape[0], len(latents))
+    assert_equals(samples.shape, (1, len(latents)))
+
+    q = ma.masked_array(
+        np.array([(False,) * D] * 3, dtype=[('', bool)] * D),
+        mask=[(False,) * (D / 2) + (True,) * (D / 2)] * 3)
+    samples = query.posterior_predictive(q, latents, prng)
+    assert_equals(samples.shape, (3, len(latents)))
 
 
 def test_posterior_predictive_statistic():
@@ -60,4 +66,11 @@ def test_posterior_predictive_statistic():
     statistic = query.posterior_predictive_statistic(
         q, latents, prng, merge=['mode', 'mode', 'avg', 'avg'])
     assert_equals(statistic.shape, (1,))
+    assert_equals(len(statistic.dtype), D)
+
+    q = ma.masked_array(
+        np.array([(False,) * D] * 3, dtype=[('', bool)] * D),
+        mask=[(False,) * (D / 2) + (True,) * (D / 2)] * 3)
+    statistic = query.posterior_predictive_statistic(q, latents, prng)
+    assert_equals(statistic.shape, (3,))
     assert_equals(len(statistic.dtype), D)
