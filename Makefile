@@ -47,4 +47,4 @@ lint:
 .PHONY: clean
 clean:
 	rm -rf release relwithdebinfo debug microscopes_mixturemodel.egg-info
-	find microscopes/ -name '*.cpp' -o -name '*.so' -o -name '*.pyc' -type f -print0 | xargs -0 rm -f --
+	find microscopes/ -name '*.cpp' -o -name '*.so' -o -name '*.pyc' -type f -print0 | xargs -0 rm --
