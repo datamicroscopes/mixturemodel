@@ -24,8 +24,7 @@ def zmatrix(latents):
 
     Returns
     -------
-    zmat : ndarray
-        a (N, N) shape matrix
+    zmat : (N, N) ndarray
 
     Notes
     -----
@@ -52,11 +51,11 @@ def posterior_predictive(q, latents, r, samples_per_chain=1):
     Returns
     -------
     samples : (N, M) recarray
-        where `M = len(latents) * samples_per_chain`
+        where ``M = len(latents) * samples_per_chain``
 
     Notes
     -----
-    If `N=1`, the resultng `samples` will *not* be collasped into a (M,) shape
+    If ``N=1``, the resultng `samples` will *not* be collasped into a (M,) shape
     recarray for consistency purposes.
 
     """
