@@ -5,7 +5,7 @@ from microscopes.mixture.definition import (
 )
 from microscopes.models import (
     bb,
-    #bbnc,
+    bbnc,
     nich,
     niw,
 )
@@ -29,8 +29,8 @@ from nose.tools import assert_true
 from nose.plugins.attrib import attr
 
 
-def _test_runner_default_kernel_config(kc_fn):
-    defn = model_definition(10, [bb, nich, niw(3)])
+def _test_runner_kernel_config(kc_fn, models):
+    defn = model_definition(10, models)
     Y = toy_dataset(defn)
     view = numpy_dataview(Y)
     kc = kc_fn(defn)
@@ -54,16 +54,24 @@ def _test_runner_default_kernel_config(kc_fn):
 
 
 def test_runner_default_kernel_config():
-    _test_runner_default_kernel_config(runner.default_kernel_config)
+    models = [bb, nich, niw(3)]
+    _test_runner_kernel_config(runner.default_kernel_config, models)
+
+
+def test_runner_default_kernel_config_nonconj():
+    models = [bbnc, nich, niw(3)]
+    _test_runner_kernel_config(runner.default_kernel_config, models)
 
 
 def test_runner_default_kernel_config_with_cluster():
+    models = [bb, nich, niw(3)]
+
     def kc_fn(defn):
         return list(it.chain(
             runner.default_assign_kernel_config(defn),
             runner.default_feature_hp_kernel_config(defn),
             runner.default_cluster_hp_kernel_config(defn)))
-    _test_runner_default_kernel_config(kc_fn)
+    _test_runner_kernel_config(kc_fn, models)
 
 
 def test_runner_convergence():

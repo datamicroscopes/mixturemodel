@@ -55,8 +55,8 @@ def posterior_predictive(q, latents, r, samples_per_chain=1):
 
     Notes
     -----
-    If ``N=1``, the resultng `samples` will *not* be collasped into a (M,) shape
-    recarray for consistency purposes.
+    If ``N=1``, the resultng `samples` will *not* be collasped into a (M,)
+    shape recarray for consistency purposes.
 
     """
 

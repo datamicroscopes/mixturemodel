@@ -38,19 +38,29 @@ def default_assign_kernel_config(defn):
     """
     # XXX(stephentu): model_descriptors should implement
     # is_conjugate()
-    nonconj_models = filter(lambda x: x.name() == 'bbnc', defn.models())
+
+    def is_nonconj(x):
+        return x.name() == 'bbnc'
+
+    nonconj_indices = [
+        idx for idx, x in enumerate(defn.models()) if is_nonconj(x)
+    ]
 
     defn, is_fixed = _validate_definition(defn)
     if is_fixed:
-        assert not nonconj_models
+        assert not nonconj_indices
         return ['assign_fixed']
 
     # assignment
-    if nonconj_models:
+    if nonconj_indices:
+        # XXX(stephentu): 0.1 is arbitrary
+        # XXX(stephentu): don't assume bbnc
+        theta_config = {
+            'tparams': {i: {'p': 0.1} for i in nonconj_indices}
+        }
         kernels = [
             ('assign_resample', {'m': 10}),
-            ('theta', {'p': 0.1}),  # XXX(stephentu): 0.1 is arbitrary
-                                    # XXX(stephentu): don't assume bbnc
+            ('theta', theta_config),
         ]
     else:
         kernels = ['assign']
@@ -158,48 +168,66 @@ class runner(object):
             raise ValueError("definition and latent don't match type")
         validator.validate_len(view, defn.n())
 
+        def require_feature_indices(v):
+            nfeatures = len(defn.models())
+            valid_keys = set(xrange(nfeatures))
+            if not set(v.keys()).issubset(valid_keys):
+                msg = "bad config found: {}".format(v)
+                raise ValueError(msg)
+
         self._defn = defn
         self._view = view
         self._latent = latent
 
         self._kernel_config = []
         for kernel in kernel_config:
+
             if hasattr(kernel, '__iter__'):
                 name, config = kernel
             else:
                 name, config = kernel, {}
-            validator.validate_type(config, dict)
+            validator.validate_dict_like(config)
+
             if name == 'assign_fixed':
                 if not self._is_fixed:
                     # really a warning
                     raise ValueError("state should not use fixed kernel")
                 if config:
                     raise ValueError("assign_fixed has no parameters")
+
             elif name == 'assign':
                 if self._is_fixed:
                     raise ValueError("fixed_state cannot use variable kernel")
                 if config:
                     raise ValueError("assign has no parameters")
+
             elif name == 'assign_resample':
                 if self._is_fixed:
                     raise ValueError("fixed_state cannot use variable kernel")
                 if config.keys() != ['m']:
                     raise ValueError("bad config found: {}".format(config))
                 validator.validate_positive(config['m'])
+
             elif name == 'feature_hp':
-                validator.validate_kwargs(config, ('hparams',))
-                nfeatures = len(defn.models())
-                valid_keys = set(xrange(nfeatures))
-                if not set(config['hparams'].keys()).issubset(valid_keys):
-                    msg = "bad config found: {}".format(config['hparams'])
-                    raise ValueError(msg)
+                if config.keys() != ['hparams']:
+                    raise ValueError("bad config found: {}".format(config))
+                require_feature_indices(config['hparams'])
+
             elif name == 'cluster_hp':
-                validator.validate_kwargs(config, ('cparam',))
+                if config.keys() != ['cparam']:
+                    raise ValueError("bad config found: {}".format(config))
                 if config['cparam'].keys() != ['alpha']:
                     msg = "bad config found: {}".format(config['cparam'])
                     raise ValueError(msg)
+
+            elif name == 'theta':
+                if config.keys() != ['tparams']:
+                    raise ValueError("bad config found: {}".format(config))
+                require_feature_indices(config['tparams'])
+
             else:
                 raise ValueError("bad kernel found: {}".format(name))
+
             self._kernel_config.append((name, config))
 
     def run(self, r, niters=10000):
@@ -230,6 +258,8 @@ class runner(object):
                     slice.hp(model, r, hparams=config['hparams'])
                 elif name == 'cluster_hp':
                     slice.hp(model, r, cparam=config['cparam'])
+                elif name == 'theta':
+                    slice.theta(model, r, tparams=config['tparams'])
                 else:
                     assert False, "should not be reach"
 
