@@ -153,7 +153,7 @@ def test_runner_multyvac():
     latents = [model.initialize(defn, view, prng)
                for _ in xrange(2)]
     runners = [runner.runner(defn, view, latent, kc) for latent in latents]
-    r = parallel.runner(runners, backend='multyvac', layer='perf4', core='f2')
+    r = parallel.runner(runners, backend='multyvac', layer='perf', core='f2')
     r.run(r=prng, niters=1000)
     r.run(r=prng, niters=1000)
 
@@ -169,6 +169,6 @@ def test_runner_multyvac_volume():
                for _ in xrange(2)]
     runners = [runner.runner(defn, view, latent, kc) for latent in latents]
     r = parallel.runner(
-        runners, backend='multyvac', layer='perf4', core='f2', volume='data')
+        runners, backend='multyvac', layer='perf', core='f2', volume='data')
     r.run(r=prng, niters=1000)
     r.run(r=prng, niters=1000)
