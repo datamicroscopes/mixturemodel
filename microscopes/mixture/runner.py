@@ -276,5 +276,5 @@ class runner(object):
     def expensive_state(self, view):
         self._view = view
 
-    def expensive_state_digest(self):
-        return self._view.digest()
+    def expensive_state_digest(self, h):
+        return self._view.digest(h)
