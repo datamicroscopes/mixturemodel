@@ -20,6 +20,7 @@ def data_with_posterior(defn,
                         feature_hps=None,
                         preprocess_data_fn=None,
                         r=None):
+    # XXX(stephentu): should only accept conjugate models
     if r is None:
         r = rng()
     Y_clusters, _ = sample(defn, cluster_hp, feature_hps, r)

@@ -87,7 +87,8 @@ def test_runner_convergence():
 
     def sample_fn():
         r.run(r=prng, niters=10)
-        return idmap[tuple(permutation_canonical(latent.assignments()))]
+        new_latent = r.get_latent()
+        return idmap[tuple(permutation_canonical(new_latent.assignments()))]
 
     assert_discrete_dist_approx(sample_fn, posterior, ntries=100)
 
