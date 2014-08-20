@@ -267,3 +267,14 @@ class runner(object):
         """Returns the current value of the underlying state object.
         """
         return self._latent
+
+    @property
+    def expensive_state(self):
+        return self._view
+
+    @expensive_state.setter
+    def expensive_state(self, view):
+        self._view = view
+
+    def expensive_state_digest(self):
+        return self._view.digest()
