@@ -446,7 +446,7 @@ cdef class state:
 
     def _validate_gid(self, gid):
         if not self._thisptr.get().isactivegroup(gid):
-            raise ValueError("invalid gid")
+            raise ValueError("invalid gid: {}".format(gid))
 
     def get_feature_hp(self, int i):
         self._validate_fid(i)

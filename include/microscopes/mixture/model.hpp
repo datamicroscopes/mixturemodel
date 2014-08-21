@@ -62,7 +62,10 @@ public:
   state(const std::vector<std::shared_ptr<models::hypers>> &hypers,
         const GroupManager<group_type> &groups)
     : hypers_(hypers), groups_(groups)
-  {}
+  {
+    for (const auto &h : hypers_)
+      MICROSCOPES_DCHECK(h, "hyper is null");
+  }
 
   inline common::hyperparam_bag_t
   get_cluster_hp() const
@@ -166,6 +169,7 @@ public:
       auto value = acc.get();
       if (unlikely(value.anymasked()))
         continue;
+      MICROSCOPES_ASSERT(hypers_[i]);
       g[i]->add_value(*hypers_[i], value, rng);
     }
   }
@@ -422,8 +426,8 @@ public:
         def.create_hypers(),
         common::fixed_group_manager<detail::group_type>(
           def.n(), def.groups()));
-    for (size_t i = 0; i < s->hypers_.size(); i++) {
-      auto &gdata = s->groups_.group(i).data_;
+    for (size_t gid = 0; gid < def.groups(); gid++) {
+      auto &gdata = s->groups_.group(gid).data_;
       gdata.reserve(s->hypers_.size());
       for (auto &m : s->hypers_)
         gdata.emplace_back(m->create_group(rng));
@@ -455,16 +459,14 @@ public:
       p->set_feature_hp(i, feature_inits[i]);
     std::vector<size_t> assign;
     if (assignments.empty())
-      assign = common::util::random_assignment_vector(data.size(), rng);
-    else {
-      MICROSCOPES_DCHECK(assignments.size() == data.size(),
-        "invalid length assignment vector");
-      MICROSCOPES_DCHECK(
-        *std::max_element(
-            assignments.begin(), assignments.end()) < def.groups(),
-        "invalid assignment vector");
+      assign = common::util::random_assignment_vector(data.size(), rng, def.groups());
+    else
       assign = assignments;
-    }
+    MICROSCOPES_DCHECK(assign.size() == data.size(),
+      "invalid length assignment vector");
+    MICROSCOPES_DCHECK(
+      *std::max_element(assign.begin(), assign.end()) < def.groups(),
+      "invalid assignment vector");
     data.reset();
     for (size_t i = 0; i < assign.size(); i++, data.next()) {
       auto acc = data.get();
