@@ -4,6 +4,7 @@
 # python imports
 import numpy as np
 import numpy.ma as ma
+import copy
 
 from microscopes.common._rng import rng
 from microscopes.common._entity_state import (
@@ -14,6 +15,7 @@ from microscopes.common.recarray._dataview cimport abstract_dataview
 from microscopes.io.schema_pb2 import CRP
 from distributions.io.schema_pb2 import DirichletDiscrete
 from microscopes.common import validator
+
 
 cdef numpy_dataview get_dataview_for(y):
     """
@@ -57,6 +59,7 @@ cdef numpy_dataview get_dataview_for(y):
     return numpy_dataview(inp_data)
 
 # XXX: fixed_state and state duplicate code for now
+
 
 cdef class fixed_state:
     """The underlying state of a fixed group bayesian mixture model.
@@ -320,6 +323,18 @@ cdef class fixed_state:
 
     def __reduce__(self):
         return (_reconstruct_fixed_state, (self._defn, self.serialize()))
+
+    def __copy__(self):
+        """Returns a shallow copy of this object
+
+        Shallow copy current means the model object is shared,
+        but the underlying state representation is not
+        """
+        return fixed_state(self._defn, bytes=self.serialize())
+
+    def __deepcopy__(self, memo):
+        defn = copy.deepcopy(self._defn, memo)
+        return fixed_state(defn, bytes=self.serialize())
 
 
 cdef class state:
@@ -596,6 +611,18 @@ cdef class state:
 
     def __reduce__(self):
         return (_reconstruct_state, (self._defn, self.serialize()))
+
+    def __copy__(self):
+        """Returns a shallow copy of this object
+
+        Shallow copy current means the model object is shared,
+        but the underlying state representation is not
+        """
+        return state(self._defn, bytes=self.serialize())
+
+    def __deepcopy__(self, memo):
+        defn = copy.deepcopy(self._defn, memo)
+        return state(defn, bytes=self.serialize())
 
 
 def bind_fixed(fixed_state s, abstract_dataview data):

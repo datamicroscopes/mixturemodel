@@ -1,28 +1,44 @@
 # test the low level primitive operations
 
-from distributions.dbg.models import \
-    bb as dist_bb, \
-    bnb as dist_bnb, \
-    nich as dist_nich
+from distributions.dbg.models import (
+    bb as dist_bb,
+    bnb as dist_bnb,
+    nich as dist_nich,
+)
 
-from microscopes.models import bb, bnb, nich
-from microscopes.mixture.definition import model_definition
+from microscopes.models import bb, bnb, nich, niw
+from microscopes.mixture.definition import (
+    model_definition,
+    fixed_model_definition,
+)
 from microscopes.common.rng import rng
 
-from microscopes.mixture.model import \
-    initialize as cxx_initialize, \
-    deserialize as cxx_deserialize
+from microscopes.mixture.model import (
+    initialize as cxx_initialize,
+    deserialize as cxx_deserialize,
+    bind,
+    bind_fixed,
+    initialize_fixed,
+)
 
-from microscopes.common.recarray.dataview import \
-    numpy_dataview as cxx_numpy_dataview
+from microscopes.common.recarray.dataview import (
+    numpy_dataview as cxx_numpy_dataview,
+)
+
+from microscopes.mixture.testutil import toy_dataset
 
 import itertools as it
 import numpy as np
 import numpy.ma as ma
 import pickle
+import copy
 
 #from nose.plugins.attrib import attr
-from nose.tools import assert_almost_equals
+from nose.tools import (
+    assert_almost_equals,
+    assert_equals,
+    assert_is_not,
+)
 
 
 def assert_dict_almost_equals(a, b):
@@ -207,6 +223,36 @@ def _test_serializer(initialize_fn, deserialize_fn, dataview):
 
 def test_serializer_cxx():
     _test_serializer(cxx_initialize, cxx_deserialize, cxx_numpy_dataview)
+
+
+def _test_copy_state(defn, initialize_fn, bind_fn):
+    Y = toy_dataset(defn)
+    view = cxx_numpy_dataview(Y)
+    r = rng()
+    state = initialize_fn(defn, view, r)
+    state_shallow = copy.copy(state)
+    state_deep = copy.deepcopy(state)
+    assert_is_not(state, state_shallow)
+    assert_is_not(state, state_deep)
+    assignments = list(state.assignments())
+    assert_equals(assignments, state_shallow.assignments())
+    assert_equals(assignments, state_deep.assignments())
+    b = bind_fn(state, view)
+    b.remove_value(0, r)
+    assert_equals(state.assignments()[0], -1)
+    assert_equals(assignments, state_shallow.assignments())
+    assert_equals(assignments, state_deep.assignments())
+
+
+def test_copy_state():
+    defn = model_definition(10, [bb, niw(3)])
+    _test_copy_state(defn, cxx_initialize, bind)
+
+
+def test_copy_fixed_state():
+    defn = fixed_model_definition(10, 3, [bb, bb])
+    #defn = fixed_model_definition(10, 3, [bb, niw(3)])
+    _test_copy_state(defn, initialize_fixed, bind_fixed)
 
 
 def test_sample_post_pred():

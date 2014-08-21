@@ -162,14 +162,14 @@ cdef class model_definition:
         return (_reconstruct_model_definition, args)
 
     def __copy__(self):
-        args = self._n, self._groups, self._models, self._cluster_hyperprior
+        args = self._n, self._models, self._cluster_hyperprior
         res = model_definition(*args)
         return res
 
     def __deepcopy__(self, memo):
         models = copy.deepcopy(self._models, memo)
         cluster_hyperprior = copy.deepcopy(self._cluster_hyperprior, memo)
-        args = self._n, self._groups, models, cluster_hyperprior
+        args = self._n, models, cluster_hyperprior
         res = model_definition(*args)
         return res
 

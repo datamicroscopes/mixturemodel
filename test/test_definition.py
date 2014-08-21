@@ -38,6 +38,8 @@ def test_model_definition_copy():
     assert_is_not(defn, defn_shallow)
     assert_is_not(defn, defn_deep)
     assert_is_not(defn._models, defn_deep._models)
+    assert_equals(defn.n(), defn_shallow.n())
+    assert_equals(defn.n(), defn_deep.n())
 
     defn = fixed_model_definition(10, 3, [bb, niw(2)])
     defn_shallow = copy.copy(defn)
@@ -45,3 +47,7 @@ def test_model_definition_copy():
     assert_is_not(defn, defn_shallow)
     assert_is_not(defn, defn_deep)
     assert_is_not(defn._models, defn_deep._models)
+    assert_equals(defn.n(), defn_shallow.n())
+    assert_equals(defn.n(), defn_deep.n())
+    assert_equals(defn.groups(), defn_shallow.groups())
+    assert_equals(defn.groups(), defn_deep.groups())
