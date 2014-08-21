@@ -422,17 +422,10 @@ public:
   unsafe_initialize(const fixed_model_definition &def,
                     common::rng_t &rng)
   {
-    std::shared_ptr<fixed_state> s = std::make_shared<fixed_state>(
+    return std::make_shared<fixed_state>(
         def.create_hypers(),
         common::fixed_group_manager<detail::group_type>(
           def.n(), def.groups()));
-    for (size_t gid = 0; gid < def.groups(); gid++) {
-      auto &gdata = s->groups_.group(gid).data_;
-      gdata.reserve(s->hypers_.size());
-      for (auto &m : s->hypers_)
-        gdata.emplace_back(m->create_group(rng));
-    }
-    return s;
   }
 
   /**
@@ -457,6 +450,14 @@ public:
     p->set_cluster_hp(cluster_init);
     for (size_t i = 0; i < feature_inits.size(); i++)
       p->set_feature_hp(i, feature_inits[i]);
+    // NOTE: can only initialize groups *after* the feature_hps have
+    // been initialized (e.g. it is *WRONG* to do so in unsafe_initialize())
+    for (size_t gid = 0; gid < def.groups(); gid++) {
+      auto &gdata = p->groups_.group(gid).data_;
+      gdata.reserve(p->hypers_.size());
+      for (auto &m : p->hypers_)
+        gdata.emplace_back(m->create_group(rng));
+    }
     std::vector<size_t> assign;
     if (assignments.empty())
       assign = common::util::random_assignment_vector(data.size(), rng, def.groups());
@@ -595,11 +596,10 @@ public:
     std::vector<size_t> assign;
     if (assignments.empty())
       assign = common::util::random_assignment_vector(data.size(), rng);
-    else {
-      MICROSCOPES_DCHECK(assignments.size() == data.size(),
-        "invalid length assignment vector");
+    else
       assign = assignments;
-    }
+    MICROSCOPES_DCHECK(assign.size() == data.size(),
+      "invalid length assignment vector");
     const size_t ngroups = *std::max_element(assign.begin(), assign.end()) + 1;
     for (size_t i = 0; i < ngroups; i++)
       p->create_group(rng);

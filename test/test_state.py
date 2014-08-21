@@ -33,7 +33,6 @@ import numpy.ma as ma
 import pickle
 import copy
 
-#from nose.plugins.attrib import attr
 from nose.tools import (
     assert_almost_equals,
     assert_equals,
@@ -250,8 +249,7 @@ def test_copy_state():
 
 
 def test_copy_fixed_state():
-    defn = fixed_model_definition(10, 3, [bb, bb])
-    #defn = fixed_model_definition(10, 3, [bb, niw(3)])
+    defn = fixed_model_definition(10, 3, [bb, niw(3)])
     _test_copy_state(defn, initialize_fixed, bind_fixed)
 
 
