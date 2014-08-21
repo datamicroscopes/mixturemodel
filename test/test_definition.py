@@ -4,8 +4,12 @@ from microscopes.mixture.definition import (
 )
 from microscopes.models import bb, niw
 
-from nose.tools import assert_equals
+from nose.tools import (
+    assert_equals,
+    assert_is_not,
+)
 import pickle
+import copy
 
 
 def test_model_definition_pickle():
@@ -25,3 +29,19 @@ def test_model_definition_pickle():
     assert_equals(len(defn.models()), len(defn1.models()))
     for a, b in zip(defn.models(), defn1.models()):
         assert_equals(a.name(), b.name())
+
+
+def test_model_definition_copy():
+    defn = model_definition(10, [bb, niw(3)])
+    defn_shallow = copy.copy(defn)
+    defn_deep = copy.deepcopy(defn)
+    assert_is_not(defn, defn_shallow)
+    assert_is_not(defn, defn_deep)
+    assert_is_not(defn._models, defn_deep._models)
+
+    defn = fixed_model_definition(10, 3, [bb, niw(2)])
+    defn_shallow = copy.copy(defn)
+    defn_deep = copy.deepcopy(defn)
+    assert_is_not(defn, defn_shallow)
+    assert_is_not(defn, defn_deep)
+    assert_is_not(defn._models, defn_deep._models)

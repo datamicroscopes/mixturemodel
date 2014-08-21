@@ -5,6 +5,7 @@ from microscopes.models import model_descriptor
 from microscopes.common import validator
 from microscopes.common.scalar_functions import log_exponential
 import operator as op
+import copy
 
 
 cdef vector[shared_ptr[c_component_model]] get_cmodels(models):
@@ -45,6 +46,8 @@ cdef class fixed_model_definition:
     There is currently no interface to express a hyperprior on the dirichlet
     distribution which governs the clustering behavior.
 
+    This class is not meant to be sub-classable.
+
     """
 
     def __cinit__(self, int n, int groups, models):
@@ -84,6 +87,15 @@ cdef class fixed_model_definition:
         args = (self._n, self._groups, self._models)
         return (_reconstruct_fixed_model_definition, args)
 
+    def __copy__(self):
+        res = fixed_model_definition(self._n, self._groups, self._models)
+        return res
+
+    def __deepcopy__(self, memo):
+        models = copy.deepcopy(self._models, memo)
+        res = fixed_model_definition(self._n, self._groups, models)
+        return res
+
 
 cdef class model_definition:
     """Structural definition for a dirichlet process mixture model
@@ -100,6 +112,9 @@ cdef class model_definition:
     cluster_hyperprior : dict, optional
         Describes the hyperior for the CRP
 
+    Notes
+    -----
+    This class is not meant to be sub-classable.
 
     """
 
@@ -145,6 +160,18 @@ cdef class model_definition:
     def __reduce__(self):
         args = (self._n, self._models, self._cluster_hyperprior)
         return (_reconstruct_model_definition, args)
+
+    def __copy__(self):
+        args = self._n, self._groups, self._models, self._cluster_hyperprior
+        res = model_definition(*args)
+        return res
+
+    def __deepcopy__(self, memo):
+        models = copy.deepcopy(self._models, memo)
+        cluster_hyperprior = copy.deepcopy(self._cluster_hyperprior, memo)
+        args = self._n, self._groups, models, cluster_hyperprior
+        res = model_definition(*args)
+        return res
 
 
 def _reconstruct_fixed_model_definition(n, groups, models):
