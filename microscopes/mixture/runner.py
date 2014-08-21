@@ -17,6 +17,7 @@ from microscopes.mixture.model import (
 from microscopes.kernels import gibbs, slice
 
 import itertools as it
+import copy
 
 
 def _validate_definition(defn):
@@ -144,7 +145,8 @@ class runner(object):
         The observations.
 
     latent : ``state`` or ``fixed_state``
-        The initialization state.
+        The initialization state. Note that a *copy* of `latent` is
+        made. Use :meth:`get_latent` to access the modified state.
 
     kernel_config : list
         A list of either `x` strings or `(x, y)` tuples, where `x` is a string
@@ -177,7 +179,7 @@ class runner(object):
 
         self._defn = defn
         self._view = view
-        self._latent = latent
+        self._latent = copy.deepcopy(latent)
 
         self._kernel_config = []
         for kernel in kernel_config:
@@ -265,8 +267,11 @@ class runner(object):
 
     def get_latent(self):
         """Returns the current value of the underlying state object.
+
+        Note that the returned value is a *copy*, so modifications to it will
+        not be seen by the runner.
         """
-        return self._latent
+        return copy.deepcopy(self._latent)
 
     @property
     def expensive_state(self):

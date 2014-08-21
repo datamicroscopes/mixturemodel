@@ -6,7 +6,7 @@ from distributions.dbg.models import (
     nich as dist_nich,
 )
 
-from microscopes.models import bb, bnb, nich, niw
+from microscopes.models import bb, bbnc, bnb, nich, niw
 from microscopes.mixture.definition import (
     model_definition,
     fixed_model_definition,
@@ -33,32 +33,13 @@ import numpy.ma as ma
 import pickle
 import copy
 
+#from nose.plugins.attrib import attr
 from nose.tools import (
     assert_almost_equals,
     assert_equals,
     assert_is_not,
 )
-
-
-def assert_dict_almost_equals(a, b):
-    for k, v in a.iteritems():
-        assert k in b
-        # floats don't have much precision
-        assert_almost_equals(v, b[k], places=5)
-
-
-def assert_1darray_almst_equals(a, b, places=5):
-    assert len(a.shape) == 1
-    assert a.shape[0] == b.shape[0]
-    for x, y in zip(a, b):
-        assert_almost_equals(x, y, places=places)
-
-
-def assert_suff_stats_equal(py_s, cxx_s, features, groups):
-    for fid, gid in it.product(features, groups):
-        py_ss = py_s.get_suffstats(gid, fid)
-        cxx_ss = cxx_s.get_suffstats(gid, fid)
-        assert_dict_almost_equals(py_ss, cxx_ss)
+from distributions.tests.util import assert_close
 
 
 def unset(s, data, r):
@@ -224,6 +205,30 @@ def test_serializer_cxx():
     _test_serializer(cxx_initialize, cxx_deserialize, cxx_numpy_dataview)
 
 
+def _assert_copy(s1, s2, bind_fn, view, r):
+    assert_equals(s1.nentities(), s2.nentities())
+    assert_equals(s1.nfeatures(), s2.nfeatures())
+    assert_equals(set(s1.groups()), set(s2.groups()))
+    assert_equals(s1.assignments(), s2.assignments())
+    for i in xrange(s1.nfeatures()):
+        hp1 = s1.get_feature_hp(i)
+        hp2 = s2.get_feature_hp(i)
+        assert_close(hp1, hp2)
+    for gid, fid in it.product(s1.groups(), range(s1.nfeatures())):
+        ss1 = s1.get_suffstats(gid, fid)
+        ss2 = s2.get_suffstats(gid, fid)
+        assert_close(ss1, ss2)
+    assert_almost_equals(s1.score_assignment(),
+                         s2.score_assignment())
+    assert_almost_equals(s1.score_data(None, None, r),
+                         s2.score_data(None, None, r))
+    before = list(s1.assignments())
+    gid = bind_fn(s1, view).remove_value(0, r)
+    assert_equals(s1.assignments()[0], -1)
+    assert_equals(before, s2.assignments())
+    bind_fn(s1, view).add_value(gid, 0, r)  # restore s1
+
+
 def _test_copy_state(defn, initialize_fn, bind_fn):
     Y = toy_dataset(defn)
     view = cxx_numpy_dataview(Y)
@@ -233,14 +238,8 @@ def _test_copy_state(defn, initialize_fn, bind_fn):
     state_deep = copy.deepcopy(state)
     assert_is_not(state, state_shallow)
     assert_is_not(state, state_deep)
-    assignments = list(state.assignments())
-    assert_equals(assignments, state_shallow.assignments())
-    assert_equals(assignments, state_deep.assignments())
-    b = bind_fn(state, view)
-    b.remove_value(0, r)
-    assert_equals(state.assignments()[0], -1)
-    assert_equals(assignments, state_shallow.assignments())
-    assert_equals(assignments, state_deep.assignments())
+    _assert_copy(state, state_shallow, bind_fn, view, r)
+    _assert_copy(state, state_deep, bind_fn, view, r)
 
 
 def test_copy_state():
@@ -251,6 +250,11 @@ def test_copy_state():
 def test_copy_fixed_state():
     defn = fixed_model_definition(10, 3, [bb, niw(3)])
     _test_copy_state(defn, initialize_fixed, bind_fixed)
+
+
+def test_copy_state_bbnc():
+    defn = model_definition(10, [bbnc])
+    _test_copy_state(defn, cxx_initialize, bind)
 
 
 def test_sample_post_pred():
