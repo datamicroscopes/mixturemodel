@@ -23,8 +23,8 @@ CPU_COUNT=$(shell python -c 'import multiprocessing as m; print m.cpu_count()')
 
 .PHONY: test
 test:
-	(cd test && NOSE_PROCESSES=$(CPU_COUNT) NOSE_PROCESS_TIMEOUT=240 nosetests -a '!uses_mp' --verbose)
-	(cd test && nosetests -a 'uses_mp' --verbose)
+	(cd test && NOSE_PROCESSES=$(CPU_COUNT) NOSE_PROCESS_TIMEOUT=240 nosetests -a '!uses_mp,!slow' --verbose)
+	(cd test && nosetests -a 'uses_mp,!slow' --verbose)
 
 .PHONY: travis_install
 travis_install:
