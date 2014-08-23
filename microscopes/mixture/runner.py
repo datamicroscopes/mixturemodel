@@ -15,9 +15,11 @@ from microscopes.mixture.model import (
     bind_fixed,
 )
 from microscopes.kernels import gibbs, slice
+from microscopes.kernels.slice import _parse_descriptor
 
 import itertools as it
 import copy
+import numpy as np
 
 
 def _validate_definition(defn):
@@ -91,7 +93,64 @@ def default_feature_hp_kernel_config(defn):
         # XXX(stephentu): we are arbitrarily picking w=0.1
         hparams[i] = {k: (fn, 0.1) for k, fn in hp.iteritems()}
 
-    return [('feature_hp', {'hparams': hparams})]
+    if not hparams:
+        return []
+    else:
+        return [('slice_feature_hp', {'hparams': hparams})]
+
+
+def default_grid_feature_hp_kernel_config(defn):
+    """Creates a default kernel configuration for sampling the component
+    (feature) model hyper-parameters via gridded gibbs.
+
+    Parameters
+    ----------
+    defn : mixturemodel definition
+        The hyper-priors set in the definition are used to configure the
+        hyper-parameter sampling kernels.
+
+    """
+    defn, _ = _validate_definition(defn)
+    config = {}
+
+    grid = enumerate(zip(defn.models(), defn.hyperpriors()))
+
+    for fi, (model, priors) in grid:
+        partials = copy.deepcopy(model.default_partial_hypergrid())
+        if not partials:
+            continue
+
+        evals = []
+        for update_descs, fn in priors.iteritems():
+            if not hasattr(update_descs, '__iter__'):
+                update_descs = [update_descs]
+            keyidxs = []
+            for update_desc in update_descs:
+                key, idx = _parse_descriptor(update_desc, default=None)
+                keyidxs.append((key, idx))
+
+            def func(raw, keyidxs):
+                s = 0.
+                for key, idx in keyidxs:
+                    if idx is None:
+                        s += raw[key]
+                    else:
+                        s += raw[key][idx]
+                return s
+            evals.append(lambda raw, keyidxs=keyidxs: func(raw, keyidxs))
+
+        def jointprior(raw, evals):
+            return np.array([f(raw) for f in evals]).sum()
+
+        config[fi] = {
+            'hpdf': lambda raw, evals=evals: jointprior(raw, evals),
+            'hgrid': partials,
+        }
+
+    if not config:
+        return []
+    else:
+        return [('grid_feature_hp', config)]
 
 
 def default_cluster_hp_kernel_config(defn):
@@ -113,7 +172,10 @@ def default_cluster_hp_kernel_config(defn):
         return []
     hp = defn.cluster_hyperprior()
     cparam = {k: (fn, 0.1) for k, fn in hp.iteritems()}
-    return [('cluster_hp', {'cparam': cparam})]
+    if not cparam:
+        return None
+    else:
+        return [('cluster_hp', {'cparam': cparam})]
 
 
 def default_kernel_config(defn):
@@ -156,7 +218,7 @@ class runner(object):
 
         Possible values of `x` are:
         {'assign_fixed', 'assign', 'assign_resample',
-         'feature_hp', 'cluster_hp'}
+         'grid_feature_hp', 'slice_feature_hp', 'slice_cluster_hp'}
 
     """
 
@@ -210,12 +272,24 @@ class runner(object):
                     raise ValueError("bad config found: {}".format(config))
                 validator.validate_positive(config['m'])
 
-            elif name == 'feature_hp':
+            elif name == 'grid_feature_hp':
+                require_feature_indices(config)
+                for fi, ps in config.iteritems():
+                    if set(ps.keys()) != set(('hpdf', 'hgrid',)):
+                        raise ValueError("bad config found: {}".format(ps))
+                    full = []
+                    for partial in ps['hgrid']:
+                        hp = latent.get_feature_hp(fi)
+                        hp.update(partial)
+                        full.append(hp)
+                    ps['hgrid'] = full
+
+            elif name == 'slice_feature_hp':
                 if config.keys() != ['hparams']:
                     raise ValueError("bad config found: {}".format(config))
                 require_feature_indices(config['hparams'])
 
-            elif name == 'cluster_hp':
+            elif name == 'slice_cluster_hp':
                 if config.keys() != ['cparam']:
                     raise ValueError("bad config found: {}".format(config))
                 if config['cparam'].keys() != ['alpha']:
@@ -256,9 +330,11 @@ class runner(object):
                     gibbs.assign(model, r)
                 elif name == 'assign_resample':
                     gibbs.assign_resample(model, config['m'], r)
-                elif name == 'feature_hp':
+                elif name == 'grid_feature_hp':
+                    gibbs.hp(model, config, r)
+                elif name == 'slice_feature_hp':
                     slice.hp(model, r, hparams=config['hparams'])
-                elif name == 'cluster_hp':
+                elif name == 'slice_cluster_hp':
                     slice.hp(model, r, cparam=config['cparam'])
                 elif name == 'theta':
                     slice.theta(model, r, tparams=config['tparams'])

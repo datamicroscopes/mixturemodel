@@ -63,6 +63,16 @@ def test_runner_default_kernel_config_nonconj():
     _test_runner_kernel_config(runner.default_kernel_config, models)
 
 
+def test_runner_default_kernel_grid():
+    models = [bb, nich, niw(3)]
+
+    def kc_fn(defn):
+        return list(it.chain(
+            runner.default_assign_kernel_config(defn),
+            runner.default_grid_feature_hp_kernel_config(defn)))
+    _test_runner_kernel_config(kc_fn, models)
+
+
 def test_runner_default_kernel_config_with_cluster():
     models = [bb, nich, niw(3)]
 
