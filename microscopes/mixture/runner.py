@@ -175,7 +175,7 @@ def default_cluster_hp_kernel_config(defn):
     if not cparam:
         return None
     else:
-        return [('cluster_hp', {'cparam': cparam})]
+        return [('slice_cluster_hp', {'cparam': cparam})]
 
 
 def default_kernel_config(defn):
