@@ -4,6 +4,8 @@ from distutils.core import setup
 from distutils.extension import Extension
 from distutils.version import LooseVersion
 from Cython.Build import cythonize
+from pkg_resources import parse_version as V
+
 import Cython.Compiler.Options
 Cython.Compiler.Options.fail_fast = True
 from cython import __version__ as cython_version
@@ -19,12 +21,15 @@ from subprocess import Popen, PIPE
 
 def get_git_sha1():
     try:
-        from git import Repo
-    except ImportError:
-        print >>sys.stderr, "could not import gitpython"
+        import git
+        required_version = '0.3.7'
+        if V(git.__version__) < V(required_version):
+            raise ImportError('could not import gitpython>=%s' % required_version)
+    except ImportError as e:
+        print >>sys.stderr, e
         return None
-    repo = Repo(os.path.dirname(__file__))
-    sha1 = repo.commits()[0].id
+    repo = git.Repo(os.path.dirname(__file__))
+    sha1 = repo.iter_commits().next().hexsha
     return sha1
 
 
