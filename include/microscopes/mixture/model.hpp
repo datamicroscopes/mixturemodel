@@ -336,7 +336,6 @@ protected:
 };
 
 // template instantiation
-extern template class state<common::fixed_group_manager>;
 extern template class state<common::group_manager>;
 
 class model_definition {
@@ -391,18 +390,6 @@ private:
 
 } // namespace detail
 
-class fixed_model_definition : public detail::model_definition {
-public:
-  fixed_model_definition(
-      size_t n,
-      size_t groups,
-      const std::vector<std::shared_ptr<models::model>> &models)
-    : detail::model_definition(n, models), groups_(groups) {}
-  inline size_t groups() const { return groups_; }
-private:
-  size_t groups_;
-};
-
 class model_definition : public detail::model_definition {
 public:
   model_definition(
@@ -411,92 +398,12 @@ public:
     : detail::model_definition(n, models) {}
 };
 
-class fixed_state : public detail::state<common::fixed_group_manager> {
-public:
-  fixed_state(const std::vector<std::shared_ptr<models::hypers>> &hypers,
-              const common::fixed_group_manager<detail::group_type> &groups)
-    : detail::state<common::fixed_group_manager>(hypers, groups)
-  {}
-
-  static std::shared_ptr<fixed_state>
-  unsafe_initialize(const fixed_model_definition &def,
-                    common::rng_t &rng)
-  {
-    return std::make_shared<fixed_state>(
-        def.create_hypers(),
-        common::fixed_group_manager<detail::group_type>(
-          def.n(), def.groups()));
-  }
-
   /**
    * randomly initializes to a valid point in the state space
    *
    * if the assignment vector passed in is empty, generates a random one;
    * otherwise, uses the assignment vector
    */
-  static std::shared_ptr<fixed_state>
-  initialize(const fixed_model_definition &def,
-             const common::hyperparam_bag_t &cluster_init,
-             const std::vector<common::hyperparam_bag_t> &feature_inits,
-             const std::vector<size_t> &assignments,
-             common::recarray::dataview &data,
-             common::rng_t &rng)
-  {
-    auto p = unsafe_initialize(def, rng);
-    MICROSCOPES_DCHECK(def.models().size() == feature_inits.size(),
-        "init size mismatch");
-    MICROSCOPES_DCHECK(def.n() == data.size(),
-        "data size mismatch");
-    p->set_cluster_hp(cluster_init);
-    for (size_t i = 0; i < feature_inits.size(); i++)
-      p->set_feature_hp(i, feature_inits[i]);
-    // NOTE: can only initialize groups *after* the feature_hps have
-    // been initialized (e.g. it is *WRONG* to do so in unsafe_initialize())
-    for (size_t gid = 0; gid < def.groups(); gid++) {
-      auto &gdata = p->groups_.group(gid).data_;
-      gdata.reserve(p->hypers_.size());
-      for (auto &m : p->hypers_)
-        gdata.emplace_back(m->create_group(rng));
-    }
-    std::vector<size_t> assign;
-    if (assignments.empty())
-      assign = common::util::random_assignment_vector(data.size(), rng, def.groups());
-    else
-      assign = assignments;
-    MICROSCOPES_DCHECK(assign.size() == data.size(),
-      "invalid length assignment vector");
-    MICROSCOPES_DCHECK(
-      *std::max_element(assign.begin(), assign.end()) < def.groups(),
-      "invalid assignment vector");
-    data.reset();
-    for (size_t i = 0; i < assign.size(); i++, data.next()) {
-      auto acc = data.get();
-      p->add_value(assign[i], i, acc, rng);
-    }
-    return p;
-  }
-
-  static std::shared_ptr<fixed_state>
-  deserialize(const fixed_model_definition &def,
-              const common::serialized_t &s)
-  {
-    std::vector<std::shared_ptr<models::hypers>> hypers;
-    hypers.reserve(def.models().size());
-    io::MixtureModelState m;
-    common::util::protobuf_from_string(m, s);
-    MICROSCOPES_DCHECK((size_t)m.hypers_size() == def.models().size(), "inconsistent");
-    for (size_t i = 0; i < def.models().size(); i++) {
-      auto &p = def.models()[i];
-      hypers.emplace_back(p->create_hypers());
-      hypers.back()->set_hp(m.hypers(i));
-    }
-    common::fixed_group_manager<detail::group_type> fg(
-        m.groups(), [&hypers](const std::string &s) {
-          return detail::group_type_from_string(s, hypers);
-        });
-    return std::make_shared<fixed_state>(hypers, fg);
-  }
-};
 
 class state : public detail::state<common::group_manager> {
 public:
