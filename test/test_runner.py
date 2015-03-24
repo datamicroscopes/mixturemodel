@@ -1,8 +1,5 @@
 from microscopes.mixture import model, runner
-from microscopes.mixture.definition import (
-    model_definition,
-    #fixed_model_definition,
-)
+from microscopes.mixture.definition import model_definition
 from microscopes.models import (
     bb,
     bbnc,
