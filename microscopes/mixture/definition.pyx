@@ -26,77 +26,6 @@ def _validate(models):
             validator.validate_type(m, model_descriptor)
 
 
-cdef class fixed_model_definition:
-    """Structural definition for a fixed mixture model
-
-    Parameters
-    ----------
-    n : int
-        Number of observations
-    groups : int
-        Number of groups (fixed)
-    models : iterable of model descriptors
-        The component likelihood models. Each element is either `x` or
-        `(x, y)`, where `x` is a ``model_descriptor`` and `y` is a dict
-        containing the hyperpriors. If `y` is not given, then the default
-        hyperpriors are used per model.
-
-    Notes
-    -----
-    There is currently no interface to express a hyperprior on the dirichlet
-    distribution which governs the clustering behavior.
-
-    This class is not meant to be sub-classable.
-
-    """
-
-    def __cinit__(self, int n, int groups, models):
-        validator.validate_positive(n)
-        validator.validate_positive(groups)
-        _validate(models)
-
-        self._n = n
-        self._groups = groups
-        self._models = []
-        for model in models:
-            if hasattr(model, '__len__'):
-                m, hp = model
-            else:
-                m, hp = model, model.default_hyperpriors()
-            self._models.append((m, hp))
-
-        self._thisptr.reset(
-            new c_fixed_model_definition(
-                n,
-                groups,
-                get_cmodels(map(op.itemgetter(0), self._models))))
-
-    def n(self):
-        return self._n
-
-    def groups(self):
-        return self._groups
-
-    def models(self):
-        return map(op.itemgetter(0), self._models)
-
-    def hyperpriors(self):
-        return map(op.itemgetter(1), self._models)
-
-    def __reduce__(self):
-        args = (self._n, self._groups, self._models)
-        return (_reconstruct_fixed_model_definition, args)
-
-    def __copy__(self):
-        res = fixed_model_definition(self._n, self._groups, self._models)
-        return res
-
-    def __deepcopy__(self, memo):
-        models = copy.deepcopy(self._models, memo)
-        res = fixed_model_definition(self._n, self._groups, models)
-        return res
-
-
 cdef class model_definition:
     """Structural definition for a dirichlet process mixture model
 
@@ -172,10 +101,6 @@ cdef class model_definition:
         args = self._n, models, cluster_hyperprior
         res = model_definition(*args)
         return res
-
-
-def _reconstruct_fixed_model_definition(n, groups, models):
-    return fixed_model_definition(n, groups, models)
 
 
 def _reconstruct_model_definition(n, models, cluster_hyperprior):
