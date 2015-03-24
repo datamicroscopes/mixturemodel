@@ -695,31 +695,11 @@ protected:
 };
 
 extern template class model<
-  mixture::fixed_state,
-  common::fixed_entity_based_state_object
->;
-
-extern template class model<
   mixture::state,
   common::entity_based_state_object
 >;
 
 } // namespace detail
-
-class fixed_model :
-  public detail::model<
-      fixed_state,
-      common::fixed_entity_based_state_object>
-{
-public:
-  fixed_model(
-      const std::shared_ptr<fixed_state> &impl,
-      const std::shared_ptr<common::recarray::dataview> &data)
-    : detail::model<
-        fixed_state,
-        common::fixed_entity_based_state_object>(impl, data)
-  {}
-};
 
 class model :
   public detail::model<
