@@ -70,7 +70,7 @@ def default_feature_hp_kernel_config(defn):
         hyper-parameter sampling kernels.
 
     """
-    defn, _ = _validate_definition(defn)
+    defn = _validate_definition(defn)
 
     # hyperparams
     hparams = {}
