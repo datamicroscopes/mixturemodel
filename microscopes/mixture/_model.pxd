@@ -29,7 +29,7 @@ from microscopes.common._entity_state_h cimport (
 from microscopes.common._entity_state cimport (
     entity_based_state_object,
 )
-from microscopes.mixture.definition cimport model_definition,
+from microscopes.mixture.definition cimport model_definition
 
 from microscopes.mixture._model_h cimport (
     state as c_state,
