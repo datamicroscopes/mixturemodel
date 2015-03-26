@@ -25,40 +25,21 @@ from microscopes.common._runtime_type_h cimport runtime_type
 from microscopes.common._rng cimport rng
 from microscopes.common._entity_state_h cimport (
     entity_based_state_object as c_entity_based_state_object,
-    fixed_entity_based_state_object as c_fixed_entity_based_state_object,
 )
 from microscopes.common._entity_state cimport (
     entity_based_state_object,
-    fixed_entity_based_state_object,
 )
-from microscopes.mixture.definition cimport (
-    fixed_model_definition,
-    model_definition,
-)
+from microscopes.mixture.definition cimport model_definition
+
 from microscopes.mixture._model_h cimport (
-    fixed_state as c_fixed_state,
     state as c_state,
-    fixed_model as c_fixed_model,
     model as c_model,
-)
-from microscopes.mixture._fixed_state_h cimport (
-    initialize as c_initialize_fixed,
-    deserialize as c_deserialize_fixed,
 )
 from microscopes.mixture._state_h cimport (
     initialize as c_initialize,
     deserialize as c_deserialize,
 )
 cimport numpy as np
-
-
-cdef class fixed_state:
-    cdef shared_ptr[c_fixed_state] _thisptr
-
-    # XXX: the type/structure information below is not technically
-    # part of the model, and we should find a way to remove this
-    # in the future
-    cdef fixed_model_definition _defn
 
 
 cdef class state:

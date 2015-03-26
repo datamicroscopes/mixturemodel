@@ -7,18 +7,13 @@ from distributions.dbg.models import (
 )
 
 from microscopes.models import bb, bbnc, bnb, nich, niw
-from microscopes.mixture.definition import (
-    model_definition,
-    fixed_model_definition,
-)
+from microscopes.mixture.definition import model_definition
 from microscopes.common.rng import rng
 
 from microscopes.mixture.model import (
     initialize as cxx_initialize,
     deserialize as cxx_deserialize,
     bind,
-    bind_fixed,
-    initialize_fixed,
 )
 
 from microscopes.common.recarray.dataview import (
@@ -245,11 +240,6 @@ def _test_copy_state(defn, initialize_fn, bind_fn):
 def test_copy_state():
     defn = model_definition(10, [bb, niw(3)])
     _test_copy_state(defn, cxx_initialize, bind)
-
-
-def test_copy_fixed_state():
-    defn = fixed_model_definition(10, 3, [bb, niw(3)])
-    _test_copy_state(defn, initialize_fixed, bind_fixed)
 
 
 def test_copy_state_bbnc():

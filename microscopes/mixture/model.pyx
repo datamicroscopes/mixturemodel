@@ -3,13 +3,9 @@
 
 from microscopes.mixture._model import (
     state,
-    fixed_state,
     bind,
-    bind_fixed,
     initialize,
-    initialize_fixed,
     deserialize,
-    deserialize_fixed,
 )
 
 from microscopes.common import validator
