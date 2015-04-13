@@ -23,6 +23,7 @@ before_install:
   - export CC=gcc-4.8
   - export CXX=g++-4.8
   - printenv
+  - conda list --export
   - mkdir .travis
   - (cd .travis && git clone https://github.com/datamicroscopes/common.git && cd common && make travis_install)
   - (cd .travis && git clone https://github.com/datamicroscopes/kernels.git && cd kernels && make travis_install)
