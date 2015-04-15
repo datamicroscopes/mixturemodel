@@ -350,7 +350,7 @@ def bind(state s, abstract_dataview data):
     cdef entity_based_state_object ret = (
         entity_based_state_object(s._defn.models())
     )
-    ret.set_entity(px)
+    ret._thisptr = px
     ret._refs = data
     return ret
 
