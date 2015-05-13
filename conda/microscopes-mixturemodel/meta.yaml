@@ -9,7 +9,7 @@ requirements:
   build:
     - cmake
     - python
-    - numpy
+    - numpy ==1.8.2
     - cython >=0.20.2
     - distributions >=2.0.23
     - libprotobuf
@@ -18,7 +18,7 @@ requirements:
     - microscopes-kernels
   run:
     - python
-    - numpy
+    - numpy ==1.8.2
     - scipy
     - distributions >=2.0.23
     - libprotobuf
