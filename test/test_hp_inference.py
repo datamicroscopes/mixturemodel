@@ -1,3 +1,5 @@
+from nose.plugins.attrib import attr
+
 from microscopes.mixture.model import initialize, bind
 from microscopes.kernels.gibbs import hp as gibbs_hp
 from microscopes.kernels.slice import hp as slice_hp
@@ -431,6 +433,7 @@ def _test_cluster_hp_inference(initialize_fn,
     #            raise ex._ex
 
 
+@attr('slow')
 def test_kernel_slice_cluster_hp():
     prior_fn = log_exponential(1.5)
 
