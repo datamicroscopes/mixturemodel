@@ -246,6 +246,7 @@ def _test_kernel_gibbs_hp(initialize_fn,
         nsamples=100)
 
 
+@attr('slow')
 def test_kernel_gibbs_hp():
     _test_kernel_gibbs_hp(initialize,
                           numpy_dataview,
@@ -282,6 +283,7 @@ def _test_kernel_slice_hp(initialize_fn,
         nsamples=100)
 
 
+@attr('slow')
 def test_kernel_slice_hp():
     indiv_prior_fn = log_exponential(1.2)
 
@@ -307,6 +309,7 @@ def test_kernel_slice_hp():
                           rng())
 
 
+@attr('slow')
 def test_kernel_slice_hp_noninform():
     def init_inf_kernel_state_fn(s):
         hparams = {
@@ -509,6 +512,7 @@ def _test_scalar_hp_inference(view,
                                    places)
 
 
+@attr('slow')
 def test_bnb_hp_alpha():
     N = 1000
     Y = np.array([(x,) for x in np.random.randint(low=0, high=10, size=N)],
@@ -525,6 +529,7 @@ def test_bnb_hp_alpha():
                               'alpha')
 
 
+@attr('slow')
 def test_bnb_hp_beta():
     N = 1000
     Y = np.array([(x,) for x in np.random.randint(low=0, high=10, size=N)],
@@ -557,6 +562,7 @@ def test_gp_hp_alpha():
                               'alpha')
 
 
+@attr('slow')
 def test_gp_hp_inv_beta():
     N = 1000
     Y = np.array([(x,) for x in np.random.randint(low=0, high=10, size=N)],
@@ -573,6 +579,7 @@ def test_gp_hp_inv_beta():
                               'inv_beta')
 
 
+@attr('slow')
 def test_nich_hp_mu():
     N = 1000
     Y = np.array([(x,) for x in np.random.uniform(low=-10, high=10, size=N)],
@@ -589,6 +596,7 @@ def test_nich_hp_mu():
                               'mu')
 
 
+@attr('slow')
 def test_nich_hp_sigmasq():
     N = 1000
     Y = np.array([(x,) for x in np.random.uniform(low=-1, high=1, size=N)],

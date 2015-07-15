@@ -113,6 +113,7 @@ def test_convergence_bb_missing():
     _test_convergence_bb_cxx(N, D, gibbs_assign, preprocess_fn)
 
 
+@attr('slow')
 def test_convergence_bb_nonconj_cxx():
     N, D = 3, 5
     thetaparams = {fi: {'p': 0.1} for fi in xrange(D)}

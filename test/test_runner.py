@@ -60,6 +60,7 @@ def test_runner_default_kernel_config_nonconj():
     _test_runner_kernel_config(runner.default_kernel_config, models)
 
 
+@attr('slow')
 def test_runner_default_kernel_grid():
     models = [bb, nich, niw(3)]
 
@@ -81,6 +82,7 @@ def test_runner_default_kernel_config_with_cluster():
     _test_runner_kernel_config(kc_fn, models)
 
 
+@attr('slow')
 def test_runner_convergence():
     N, D = 4, 5
     defn = model_definition(N, [bb] * D)
@@ -117,6 +119,7 @@ def test_runner_multiprocessing():
 
 
 @attr('uses_mp')
+@attr('slow')
 def test_runner_multiprocessing_convergence():
     N, D = 4, 5
     defn = model_definition(N, [bb] * D)
