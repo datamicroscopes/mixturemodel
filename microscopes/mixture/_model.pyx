@@ -79,53 +79,18 @@ cdef class state:
 
         if 'data' in kwargs:
             # handle the random initialization case
-
-            data = kwargs['data']
-            validator.validate_type(data, abstract_dataview, "data")
-            validator.validate_len(data, defn.n(), "data")
-
-            if 'r' not in kwargs:
-                raise ValueError("need parameter `r'")
-            r = kwargs['r']
-            validator.validate_type(r, rng, "r")
-
-            cluster_hp = kwargs.get('cluster_hp', None)
-            if cluster_hp is None:
-                cluster_hp = {'alpha': 1.}
-            validator.validate_type(cluster_hp, dict, "cluster_hp")
-
-            def make_cluster_hp_bytes(cluster_hp):
-                m = CRP()
-                m.alpha = cluster_hp['alpha']
-                return m.SerializeToString()
-            cluster_hp_bytes = make_cluster_hp_bytes(cluster_hp)
-
-            feature_hps = kwargs.get('feature_hps', None)
-            if feature_hps is None:
-                feature_hps = [m.default_hyperparams() for m in defn.models()]
-            validator.validate_len(
-                feature_hps, len(defn.models()), "feature_hps")
-
-            feature_hps_bytes = [
-                m.py_desc().shared_dict_to_bytes(hp)
-                for hp, m in zip(feature_hps, defn.models())]
-            for s in feature_hps_bytes:
-                c_feature_hps_bytes.push_back(s)
-
-            assignment = kwargs.get('assignment', None)
-            if assignment is not None:
-                validator.validate_len(assignment, data.size(), "assignment")
-                for s in assignment:
-                    validator.validate_nonnegative(s)
-                    c_assignment.push_back(s)
+            self._validate_kwargs(kwargs)
+            cluster_hp_bytes = self._get_cluster_hp_bytes(kwargs)
+            c_feature_hps_bytes = self._get_feature_hp_bytes(kwargs)
+            c_assignment = self._get_assignment(kwargs)
 
             self._thisptr = c_initialize(
                 defn._thisptr.get()[0],
                 cluster_hp_bytes,
                 c_feature_hps_bytes,
                 c_assignment,
-                (<abstract_dataview> data)._thisptr.get()[0],
-                (<rng> r)._thisptr[0])
+                (<abstract_dataview> kwargs['data'])._thisptr.get()[0],
+                (<rng> kwargs['r']  )._thisptr[0])
         else:
             # handle the deserialize case
             self._thisptr = c_deserialize(
@@ -134,6 +99,48 @@ cdef class state:
 
         if self._thisptr.get() == NULL:
             raise RuntimeError("could not properly construct state")
+
+    def _validate_kwargs(self, kwargs):
+        validator.validate_type(kwargs['data'], abstract_dataview, "data")
+        validator.validate_len(kwargs['data'], self._defn.n(), "data")
+
+        if 'r' not in kwargs:
+            raise ValueError("need parameter `r'")
+        validator.validate_type(kwargs['r'], rng, "r")
+
+    def _get_cluster_hp_bytes(self, kwargs):
+        cluster_hp = kwargs.get('cluster_hp', None)
+        if cluster_hp is None:
+            cluster_hp = {'alpha': 1.}
+        validator.validate_type(cluster_hp, dict, "cluster_hp")
+
+        m = CRP()
+        m.alpha = cluster_hp['alpha']
+        return m.SerializeToString()
+
+    def _get_feature_hp_bytes(self, kwargs):
+        cdef vector[hyperparam_bag_t] c_feature_hps_bytes
+        feature_hps = kwargs.get('feature_hps', None)
+        if feature_hps is None:
+            feature_hps = [m.default_hyperparams() for m in self._defn.models()]
+        validator.validate_len(
+            feature_hps, len(self._defn.models()), "feature_hps")
+        feature_hps_bytes = [
+            m.py_desc().shared_dict_to_bytes(hp)
+            for hp, m in zip(feature_hps, self._defn.models())]
+        for s in feature_hps_bytes:
+            c_feature_hps_bytes.push_back(s)
+        return c_feature_hps_bytes
+
+    def _get_assignment(self, kwargs):
+        cdef vector[size_t] c_assignment
+        assignment = kwargs.get('assignment', None)
+        if assignment is not None:
+            validator.validate_len(assignment, kwargs['data'].size(), "assignment")
+            for s in assignment:
+                validator.validate_nonnegative(s)
+                c_assignment.push_back(s)
+        return c_assignment
 
     # XXX: get rid of these introspection methods in the future
     def get_feature_types(self):
