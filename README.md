@@ -6,4 +6,6 @@ Contains the implementation of a Dirichlet process mixture model (DPMM). Routine
 
 OS X and Linux builds of `microscopes-mixturemodel` are released to [Anaconda.org](https://conda.anaconda.org). Installing them requires [Conda](https://store.continuum.io/cshop/anaconda/).  To install the current release version run:
 
+```
 $ conda install -c datamicroscopes -c distributions microscopes-mixturemodel
+```
